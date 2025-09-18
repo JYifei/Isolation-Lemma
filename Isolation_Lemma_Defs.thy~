@@ -1,0 +1,31 @@
+theory Isolation_Lemma_Defs
+  imports "HOL-Probability.Probability_Mass_Function"
+          "HOL-Probability.Product_PMF"
+begin
+
+
+type_synonym 'a weight = "'a \<Rightarrow> nat" 
+  (*weight maps an element to an natural number*)
+
+definition wt :: "'a weight \<Rightarrow> 'a set \<Rightarrow> nat"  where 
+  "wt w S = (\<Sum>x\<in>S. w x)"  
+  (*sum of weight*)
+
+definition minimizer :: "'a set set \<Rightarrow> 'a weight \<Rightarrow>'a set \<Rightarrow> bool" where
+  "minimizer F w A = (\<forall> B \<in> F. wt w A \<le> wt w B)" 
+  (*A is one minimizer of F under weight w*)
+
+definition has_unique_minimizer :: "'a set set \<Rightarrow> 'a weight \<Rightarrow> bool" where
+  "has_unique_minimizer F w = (\<exists>! A \<in> F. minimizer F w A)"
+  (*then A is the unique minimizer of F under weight w*)
+
+definition w_pmf :: "nat \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> nat) pmf"
+  where "w_pmf N U =
+     (Pi_pmf U (0::nat) (\<lambda>_. pmf_of_set {1..N}))"
+  (*weight_pmf makes w x independently and uniformly distributed over {1..N}*)
+
+
+end
+
+
+
