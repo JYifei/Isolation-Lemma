@@ -11,18 +11,19 @@ definition wt :: "'a weight \<Rightarrow> 'a set \<Rightarrow> nat"  where
   (*sum of weight*)
 
 definition minimizer :: "'a set set \<Rightarrow> 'a weight \<Rightarrow>'a set \<Rightarrow> bool" where
-  "minimizer F w A =(A \<in> F \<and> (\<forall> B \<in> F. wt w A \<le> wt w B))" 
+  "minimizer F w A =
+    (A \<in> F \<and> (\<forall> B \<in> F. wt w A \<le> wt w B))" 
   (*A is one minimizer of F under weight w*)
 
 definition has_unique_minimizer :: "'a set set \<Rightarrow> 'a weight \<Rightarrow> bool" where
-  "has_unique_minimizer F w = (\<exists>! A \<in> F. minimizer F w A)"
+  "has_unique_minimizer F w =
+    (\<exists>! A \<in> F. minimizer F w A)"
   (*then A is the unique minimizer of F under weight w*)
 
 definition w_pmf :: "nat \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> nat) pmf"
   where "w_pmf N U =
      (Pi_pmf U (0::nat) (\<lambda>_. pmf_of_set {1..N}))"
   (*weight_pmf makes w x independently and uniformly distributed over {1..N}*)
-
 
 lemma exist_minimizer:
 (*prove that for a set family F there must exist at least one minimier
@@ -322,6 +323,19 @@ proof -
   ultimately show ?thesis by simp
 qed
 
+lemma set_pmf_prob_eqI:
+  assumes "set_pmf p \<inter> x = set_pmf p \<inter> y"
+  shows "measure_pmf.prob p x = measure_pmf.prob p y"
+  by (metis assms inf_commute measure_Int_set_pmf)
+
+lemma set_pmf_w_pmf:
+  assumes "finite U"
+  shows "set_pmf (w_pmf N U) =
+     PiE_dflt U 0
+     (set_pmf \<circ> (\<lambda>_. pmf_of_set {1..N}))"
+  unfolding w_pmf_def set_Pi_pmf[OF assms]
+  ..
+
 theorem isolation_lemma_main :
   fixes U :: "'a set" and F :: "'a set set" and N :: nat
   assumes "finite U" "F \<subseteq> Pow U" " F \<noteq> {}" "N \<ge> 1"
@@ -335,6 +349,80 @@ proof-
     so for the probability that such x exists is at most n*1/N
     *)
 
+  {
+    fix x
+    assume xU: "x \<in> U"
+
+    (* todo: add an assumption on k *)
+    have "\<And>k.
+      measure_pmf.prob (w_pmf N U) {w. w x = k} = 1 / real N"
+    proof -
+      fix k
+      have "measure_pmf.prob (w_pmf N U) {w. w x = k} =
+        measure_pmf.prob (w_pmf N U) (Pi U (\<lambda>y. if x = y then {k} else UNIV))"      apply (intro set_pmf_prob_eqI)
+          unfolding set_pmf_w_pmf[OF assms(1)]
+          apply auto
+          using xU by force
+      also have "... =
+      (\<Prod>y\<in>U  .
+       measure_pmf.prob
+        (pmf_of_set {1..N})
+        (if x = y then {k} else UNIV))"
+        unfolding w_pmf_def
+        unfolding measure_Pi_pmf_Pi[OF assms(1)]
+        by auto
+      also have "... =
+      measure_pmf.prob
+        (pmf_of_set {1..N})
+        {k} *
+       (\<Prod>xa\<in>U-{x}.
+       measure_pmf.prob
+        (pmf_of_set {1..N})
+        (UNIV))"
+        apply (subst prod.remove[OF assms(1) xU])
+        apply auto
+        by (smt (verit) Diff_insert_absorb measure_pmf_UNIV
+            mk_disjoint_insert prod.not_neutral_contains_not_neutral
+            xU)
+      also have "... = 1/N"
+        sorry
+      ultimately show
+        "measure_pmf.prob (w_pmf N U) {w. w x = k} = 1 / N"
+        by auto
+    qed
+
+    have "measure_pmf.prob (w_pmf N U) {w. alpha w F x = w x} =
+      measure_pmf.prob (w_pmf N U)
+      (\<Union>k\<in>{1..N}. {w. alpha w F x = k \<and> w x = k})"
+      apply (intro set_pmf_prob_eqI)
+      unfolding set_pmf_w_pmf[OF assms(1)]
+      apply clarsimp
+      apply (subst set_pmf_of_set)
+      using assms by (auto simp add:PiE_dflt_def xU)
+    also have " ...
+        = (\<Sum>k\<in>{1..N}. measure_pmf.prob (w_pmf N U)
+          {w. alpha w F x = k \<and> w x = k})"
+      by (subst measure_pmf.finite_measure_finite_Union)
+        (auto simp: disjoint_family_on_def)
+    also have " ...
+        = (\<Sum>k\<in>{1..N}.
+        measure_pmf.prob (w_pmf N U)
+          {w. alpha w F x = k} *
+        measure_pmf.prob (w_pmf N U)
+          {w. w x = k})"
+      sorry
+    
+    also have "... =
+      measure_pmf.prob (w_pmf N U)
+      (\<Union>k\<in>{1..N}. {w. alpha w F x = k})
+      measure_pmf.prob (w_pmf N U)
+      (\<Union>k\<in>{1..N}. {w x = k})"
+  }
+oops
+    then have "measure_pmf.prob (w_pmf N U) {w. alpha w F x = w x}
+         \<le> 1 / real N" for x
+    
+  }
   (* bad case upper bound *)
   have bad_upper_bound: 
     "measure_pmf.prob (w_pmf N U) {w. \<not> has_unique_minimizer F w} \<le> real(card U) / real N"
