@@ -11,18 +11,19 @@ definition wt :: "'a weight \<Rightarrow> 'a set \<Rightarrow> nat"  where
   (*sum of weight*)
 
 definition minimizer :: "'a set set \<Rightarrow> 'a weight \<Rightarrow>'a set \<Rightarrow> bool" where
-  "minimizer F w A =(A \<in> F \<and> (\<forall> B \<in> F. wt w A \<le> wt w B))" 
+  "minimizer F w A =
+    (A \<in> F \<and> (\<forall> B \<in> F. wt w A \<le> wt w B))" 
   (*A is one minimizer of F under weight w*)
 
 definition has_unique_minimizer :: "'a set set \<Rightarrow> 'a weight \<Rightarrow> bool" where
-  "has_unique_minimizer F w = (\<exists>! A \<in> F. minimizer F w A)"
+  "has_unique_minimizer F w =
+    (\<exists>! A \<in> F. minimizer F w A)"
   (*then A is the unique minimizer of F under weight w*)
 
 definition w_pmf :: "nat \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> nat) pmf"
   where "w_pmf N U =
      (Pi_pmf U (0::nat) (\<lambda>_. pmf_of_set {1..N}))"
   (*weight_pmf makes w x independently and uniformly distributed over {1..N}*)
-
 
 lemma exist_minimizer:
 (*prove that for a set family F there must exist at least one minimier
@@ -322,6 +323,60 @@ proof -
   ultimately show ?thesis by simp
 qed
 
+lemma set_pmf_prob_eqI:
+  assumes "set_pmf p \<inter> x = set_pmf p \<inter> y"
+  shows "measure_pmf.prob p x = measure_pmf.prob p y"
+  by (metis assms inf_commute measure_Int_set_pmf)
+
+lemma set_pmf_w_pmf:
+  assumes "finite U"
+  shows "set_pmf (w_pmf N U) =
+     PiE_dflt U 0
+     (set_pmf \<circ> (\<lambda>_. pmf_of_set {1..N}))"
+  unfolding w_pmf_def set_Pi_pmf[OF assms]
+  ..
+
+
+lemma alpha_measurable:
+  assumes "finite U" "F \<subseteq> Pow U" "x \<in> U"
+  shows "(\<lambda>f. alpha (\<lambda>y. if y \<in> U-{x} then f y else 0) F x) 
+         \<in> (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV)) \<rightarrow>\<^sub>M (count_space UNIV)"
+proof -
+  
+  have wt_meas: "\<And>S. finite S \<Longrightarrow> S \<subseteq> U \<Longrightarrow>
+    (\<lambda>f. wt (\<lambda>y. if y \<in> U-{x} then f y else (0::nat)) S) 
+    \<in> (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV)) \<rightarrow>\<^sub>M (count_space UNIV)"
+  proof -
+    fix S :: "'a set"
+    assume "finite S" "S \<subseteq> U"
+    have "(\<lambda>f. wt (\<lambda>y. if y \<in> U-{x} then f y else 0) S) 
+        = (\<lambda>f. \<Sum>y\<in>S. if y \<in> U-{x} then f y else 0)"
+      unfolding wt_def by auto
+    also have "... \<in> (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV)) \<rightarrow>\<^sub>M (count_space UNIV)"
+    proof (rule measurable_sum_nat)
+      fix y assume "y \<in> S"
+      show "(\<lambda>f. if y \<in> U-{x} then f y else 0) 
+            \<in> (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV)) \<rightarrow>\<^sub>M (count_space UNIV)"
+      proof (cases "y \<in> U-{x}")
+        case True
+        then show ?thesis
+          by (auto simp: measurable_count_space_eq2)
+      next
+        case False
+        then have "\<And>f. (if y \<in> U-{x} then f y else 0) = 0"
+          by auto
+        then have "(\<lambda>f. if y \<in> U-{x} then f y else 0) = (\<lambda>f. 0)"
+          by auto
+        then show ?thesis
+    qed (use \<open>finite S\<close> in auto)
+    finally show "(\<lambda>f. wt (\<lambda>y. if y \<in> U-{x} then f y else 0) S) 
+                  \<in> (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV)) \<rightarrow>\<^sub>M (count_space UNIV)" .
+  qed
+  
+  show ?thesis
+    sorry
+qed
+
 theorem isolation_lemma_main :
   fixes U :: "'a set" and F :: "'a set set" and N :: nat
   assumes "finite U" "F \<subseteq> Pow U" " F \<noteq> {}" "N \<ge> 1"
@@ -335,6 +390,204 @@ proof-
     so for the probability that such x exists is at most n*1/N
     *)
 
+  have probx: "x \<in> U \<Longrightarrow>
+    measure_pmf.prob (w_pmf N U)
+      {w. alpha w F x = w x} \<le> 1 / N" for x
+  proof -
+    assume xU: "x \<in> U"
+
+    (* todo: add an assumption on k *)
+    have probk: "\<And>k. k \<in> {1..N} \<Longrightarrow>
+      measure_pmf.prob (w_pmf N U) {w. w x = k} = 1 / real N"
+    proof -
+      fix k
+      assume "k \<in> {1..N}"
+      have "measure_pmf.prob (w_pmf N U) {w. w x = k} =
+        measure_pmf.prob (w_pmf N U) (Pi U (\<lambda>y. if x = y then {k} else UNIV))"      apply (intro set_pmf_prob_eqI)
+          unfolding set_pmf_w_pmf[OF assms(1)]
+          apply auto
+          using xU by force
+      also have "... =
+      (\<Prod>y\<in>U  .
+       measure_pmf.prob
+        (pmf_of_set {1..N})
+        (if x = y then {k} else UNIV))"
+        unfolding w_pmf_def
+        unfolding measure_Pi_pmf_Pi[OF assms(1)]
+        by auto
+      also have "... =
+      measure_pmf.prob
+        (pmf_of_set {1..N})
+        {k} *
+       (\<Prod>xa\<in>U-{x}.
+       measure_pmf.prob
+        (pmf_of_set {1..N})
+        (UNIV))"
+        apply (subst prod.remove[OF assms(1) xU])
+        apply auto
+        by (smt (verit) Diff_insert_absorb measure_pmf_UNIV
+            mk_disjoint_insert prod.not_neutral_contains_not_neutral
+            xU)
+      also have "... = 1/N"
+        proof -
+          have prod_eq_1: "(\<Prod>xa\<in>U-{x}. measure_pmf.prob (pmf_of_set {1..N}) UNIV) = 1"
+            using measure_pmf_UNIV by simp
+          
+          have prob_k: "measure_pmf.prob (pmf_of_set {1..N}) {k} = 1 / real N"
+          proof -
+            have "measure_pmf.prob (pmf_of_set {1..N}) {k}
+                  = real (card ({1..N} \<inter> {k})) / real (card {1..N})"
+              using measure_pmf_of_set[of "{1..N}" "{k}"] \<open>N \<ge> 1\<close>
+              by auto
+            also have "... = real (card {k}) / real N"
+              using card_atLeastAtMost[of 1 N] \<open>N \<ge> 1\<close> \<open>k \<in> {1..N}\<close>
+              by auto
+            also have "... = 1 / real N"
+              by simp
+            finally show ?thesis .
+          qed
+          show ?thesis
+            using prod_eq_1 prob_k by simp
+        qed
+      ultimately show
+        "measure_pmf.prob (w_pmf N U) {w. w x = k} = 1 / N"
+        by auto
+    qed
+
+    have "measure_pmf.prob (w_pmf N U) {w. alpha w F x = w x} =
+      measure_pmf.prob (w_pmf N U)
+      (\<Union>k\<in>{1..N}. {w. alpha w F x = k \<and> w x = k})"
+      apply (intro set_pmf_prob_eqI)
+      unfolding set_pmf_w_pmf[OF assms(1)]
+      apply clarsimp
+      apply (subst set_pmf_of_set)
+      using assms by (auto simp add:PiE_dflt_def xU)
+    also have " ...
+        = (\<Sum>k\<in>{1..N}. measure_pmf.prob (w_pmf N U)
+          {w. alpha w F x = k \<and> w x = k})"
+      by (subst measure_pmf.finite_measure_finite_Union)
+        (auto simp: disjoint_family_on_def)
+
+  also have " ...
+      = (\<Sum>k\<in>{1..N}.
+      measure_pmf.prob (w_pmf N U)
+        {w. alpha w F x = k} *
+      measure_pmf.prob (w_pmf N U)
+        {w. w x = k})"
+  proof (intro sum.cong, simp)
+    fix k assume "k \<in> {1..N}"
+    
+    have "measure_pmf.prob (w_pmf N U) {w. alpha w F x = k \<and> w x = k}
+        = measure_pmf.prob (w_pmf N U) 
+            ({w. w x = k} \<inter> {w. alpha w F x = k})"
+      by (simp add: Collect_conj_eq inf_commute)
+    
+    also have "... = measure_pmf.prob (w_pmf N U) {w. w x = k}
+                   * measure_pmf.prob (w_pmf N U) {w. alpha w F x = k}"
+    proof -
+      have ps: "prob_space (measure_pmf (w_pmf N U))"
+        by (rule prob_space_measure_pmf)
+  
+      have indep: "prob_space.indep_var (measure_pmf (w_pmf N U))
+                 (count_space UNIV) (\<lambda>w. w x)
+                 (count_space UNIV) (\<lambda>w. alpha w F x)"
+      proof -
+        have ps: "prob_space (measure_pmf (w_pmf N U))"
+          by (rule prob_space_measure_pmf)
+        
+        have indep_coords: "prob_space.indep_vars (measure_pmf (w_pmf N U))
+                              (\<lambda>_. count_space UNIV) (\<lambda>y w. w y) U"
+          unfolding w_pmf_def
+          using indep_vars_Pi_pmf[OF assms(1)] by simp
+        
+        have indep_split: "prob_space.indep_var (measure_pmf (w_pmf N U))
+                             (Pi\<^sub>M {x} (\<lambda>_. count_space UNIV)) 
+                             (\<lambda>\<omega>. restrict \<omega> {x})
+                             (Pi\<^sub>M (U - {x}) (\<lambda>_. count_space UNIV)) 
+                             (\<lambda>\<omega>. restrict \<omega> (U - {x}))"
+          apply (rule prob_space.indep_var_restrict[OF ps indep_coords])
+          using xU by auto
+        
+        have meas_x: "(\<lambda>f. f x) \<in> (Pi\<^sub>M {x} (\<lambda>_. count_space UNIV)) \<rightarrow>\<^sub>M (count_space UNIV)"
+          by (simp add: measurable_count_space_eq2)
+        
+        have meas_alpha: "(\<lambda>f. alpha (\<lambda>y. if y \<in> U-{x} then f y else 0) F x) 
+                         \<in> (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV)) \<rightarrow>\<^sub>M (count_space UNIV)"
+          using alpha_measurable[OF assms(1,2) xU] .
+        
+        have composed: "prob_space.indep_var (measure_pmf (w_pmf N U))
+                          (count_space UNIV) ((\<lambda>f. f x) \<circ> (\<lambda>\<omega>. restrict \<omega> {x}))
+                          (count_space UNIV) ((\<lambda>f. alpha (\<lambda>y. if y \<in> U-{x} then f y else 0) F x) 
+                                              \<circ> (\<lambda>\<omega>. restrict \<omega> (U - {x})))"
+          using prob_space.indep_var_compose[OF ps indep_split meas_x meas_alpha]
+          by simp
+        
+        have eq1: "(\<lambda>f. f x) \<circ> (\<lambda>\<omega>. restrict \<omega> {x}) = (\<lambda>w. w x)"
+          using xU by auto
+        
+        have eq2: "(\<lambda>f. alpha (\<lambda>y. if y \<in> U-{x} then f y else 0) F x) 
+                  \<circ> (\<lambda>\<omega>. restrict \<omega> (U - {x})) = (\<lambda>w. alpha w F x)"
+          using alpha_independent_of_coord[OF assms(1,2) xU]
+          by auto
+        
+        show ?thesis
+          using composed unfolding eq1 eq2 .
+      qed
+
+    have k_meas: "{k} \<in> sets (count_space UNIV)" by simp
+    
+    have "measure_pmf.prob (w_pmf N U) {w. w x \<in> {k} \<and> alpha w F x \<in> {k}}
+        = measure_pmf.prob (w_pmf N U) {w. w x \<in> {k}}
+        * measure_pmf.prob (w_pmf N U) {w. alpha w F x \<in> {k}}"
+      using prob_space.prob_indep_random_variable[OF ps indep k_meas k_meas]
+      by simp
+    
+    moreover have "{w. w x \<in> {k} \<and> alpha w F x \<in> {k}} = {w. w x = k} \<inter> {w. alpha w F x = k}"
+      by auto
+    moreover have "{w. w x \<in> {k}} = {w. w x = k}" by auto
+    moreover have "{w. alpha w F x \<in> {k}} = {w. alpha w F x = k}" by auto
+    
+    ultimately show ?thesis by simp
+  qed
+        
+  finally show "measure_pmf.prob (w_pmf N U) {w. alpha w F x = k \<and> w x = k}
+              = measure_pmf.prob (w_pmf N U) {w. alpha w F x = k}
+              * measure_pmf.prob (w_pmf N U) {w. w x = k}"
+    by auto
+qed
+
+
+    also have calc_main:
+      "...
+       \<le> (1 / real N) * (\<Sum>k\<in>{1..N}. measure_pmf.prob (w_pmf N U) {w. alpha w F x = k})"
+      using probk
+      by (simp add: sum_distrib_left mult.commute sum_mono mult_left_mono)
+
+    moreover
+       (*Independent, sum of all probability that alpha(x) = k is less or equal than 1*)
+      have sum_alpha_le1: "(\<Sum>k\<in>{1..N}. measure_pmf.prob (w_pmf N U) {w. alpha w F x = k}) \<le> 1"
+      proof -
+        have "(\<Sum>k\<in>{1..N}. measure_pmf.prob (w_pmf N U) {w. alpha w F x = k})
+             = measure_pmf.prob (w_pmf N U) (\<Union>k\<in>{1..N}. {w. alpha w F x = k})"
+          by (subst measure_pmf.finite_measure_finite_Union) (auto simp: disjoint_family_on_def)
+        also have "... \<le> 1" by (rule measure_pmf.prob_le_1)
+        finally show ?thesis .
+      qed
+    ultimately show
+      "measure_pmf.prob (w_pmf N U) {w. alpha w F x = w x} \<le> 1 / N"
+      using assms(4)
+        frac_le[of "1"
+          "\<Sum>uud = 1..N.
+          measure_pmf.prob (w_pmf N U)
+           {uuc. alpha uuc F x = uud}"
+          "real N" "real N"]
+        times_divide_eq_left[of "1" "real N"
+          "\<Sum>uud = 1..N.
+          measure_pmf.prob (w_pmf N U)
+           {uuc. alpha uuc F x = uud}"]
+      by linarith
+  qed
+
   (* bad case upper bound *)
   have bad_upper_bound: 
     "measure_pmf.prob (w_pmf N U) {w. \<not> has_unique_minimizer F w} \<le> real(card U) / real N"
@@ -344,144 +597,22 @@ proof-
          \<le> measure_pmf.prob (w_pmf N U) (\<Union>x\<in>U. {w. alpha w F x = w x})"
     proof -
       have inclusion:  "{w. \<not> has_unique_minimizer F w} \<subseteq> (\<Union>x\<in>U. {w. alpha w F x = w x})"
-      proof
-        fix w
-        assume wBad: "w \<in> {w. \<not> has_unique_minimizer F w}"
-        hence "\<not> has_unique_minimizer F w" by simp
-        then obtain A B where AB: "A\<in>F" "B\<in>F" "minimizer F w A" "minimizer F w B" "A\<noteq>B"
-          by (meson assms(3) no_unique_minimizer)
-        have AU: "A \<subseteq> U" and BU: "B \<subseteq> U"
-          using AB assms(2) by auto
-        have "A - B \<noteq> {} \<or> B - A \<noteq> {}" using AB(5) by auto
-        then consider (inAB) x where "x \<in> A - B"
-          | (inBA) x where "x \<in> B - A" by auto
-        then show "w \<in> (\<Union>x\<in>U. {w. alpha w F x = w x})"
-        proof cases
-          case (inAB x)
-          from AU inAB have xU: "x \<in> U" by auto
-          have alpha_eq :"alpha w F x = w x"
-            by (meson AB(1,2,3,4) assms(1,2) inAB two_minimizers_alpha_eq)
-          have "w \<in> {w. alpha w F x = w x}" by (simp add: alpha_eq)
-          with xU show ?thesis by auto
-        next 
-          case (inBA x)
-          from BU inBA have xU: "x \<in> U" by auto
-          have alpha_eq: "alpha w F x = w x"
-            by (meson AB(1,2,3,4) assms(1,2) inBA two_minimizers_alpha_eq)
-          have "w \<in> {w. alpha w F x = w x}" by (simp add: alpha_eq)
-          with xU show ?thesis by auto
-        qed
-      qed
-      from inclusion show ?thesis 
+        unfolding has_unique_minimizer_def apply auto
+        apply (meson assms(3) exist_minimizer)
+        apply (smt (verit) DiffI Pow_iff assms(1,2) subsetD two_minimizers_alpha_eq)
+        by (smt (verit) DiffI Pow_iff assms(1,2) subsetD two_minimizers_alpha_eq)
+        from inclusion show ?thesis 
         using measure_pmf.finite_measure_mono by auto
     qed
     (* union bound *)
     also have "... \<le> (\<Sum>x\<in>U. measure_pmf.prob (w_pmf N U) {w. alpha w F x = w x})"
-    proof -
-      have meas: "\<And>x. x \<in> U \<Longrightarrow> {w. alpha w F x = w x} \<in> sets (measure_pmf (w_pmf N U))" by simp 
-      from measure_UNION_le[OF assms(1) meas]
-      show ?thesis by simp
-    qed
+      apply (intro measure_UNION_le)
+      by (auto simp add: assms(1))
 
     (* each term \<le> 1/N *)
     also have "... \<le> (\<Sum>x\<in>U. 1 / real N)"
-    proof (intro sum_mono)
-      fix x assume "x \<in> U"
-      have one_over_N_bound:
-        "measure_pmf.prob (w_pmf N U) {w. alpha w F x = w x} \<le> 1 / real N"
-      proof -
-        (*First, prove that "alpha(x) = w(x)" is the same as
-                            "\<Union>k\<in>{1..N}, alpha(x) = k \<and> w(x) = k"*)
-        have partition_prob:
-          "measure_pmf.prob (w_pmf N U) {w. alpha w F x = w x}
-           = measure_pmf.prob (w_pmf N U) (\<Union>k\<in>{1..N}. {w. alpha w F x = k \<and> w x = k})"
-        proof -
-          have "{w. alpha w F x = w x} = (\<Union>k::nat. {w. alpha w F x = k \<and> w x = k})" by auto
-          also have "measure_pmf.prob (w_pmf N U) (\<Union>k::nat. {w. alpha w F x = k \<and> w x = k})
-                   = measure_pmf.prob (w_pmf N U) (\<Union>k\<in>{1..N}. {w. alpha w F x = k \<and> w x = k})"
-          (*If we can prove that, for k larger than N, the probability is 0, then it becomes obvious.*)
-          proof -
-            have k0: "\<And>k. k \<notin> {1..N} \<Longrightarrow> measure_pmf.prob (w_pmf N U) {w. w x = k} = 0"
-            proof -
-              fix k assume hk: "k \<notin> {1..N}"
-              show "measure_pmf.prob (w_pmf N U) {w. w x = k} = 0"
-                by (metis \<open>x \<in> U\<close> assms(1,4) hk w_pmf_outside_range_zero)
-            qed
-            have "\<And>k. k \<notin> {1..N} \<Longrightarrow> measure_pmf.prob (w_pmf N U) {w. alpha w F x = k \<and> w x = k} = 0" 
-            proof -
-              fix k assume hk: "k \<notin> {1..N}"
-              have sub: "{w. alpha w F x = k \<and> w x = k} \<subseteq> {w. w x = k}" by auto
-              have mono: "measure_pmf.prob (w_pmf N U) {w. alpha w F x = k \<and> w x = k}
-                        \<le> measure_pmf.prob (w_pmf N U) {w. w x = k}" 
-                by (simp add: measure_pmf.finite_measure_mono sub)
-              have "measure_pmf.prob (w_pmf N U) {w. alpha w F x = k \<and> w x = k} \<le> 0"
-                using hk k0 mono by auto
-              moreover have "0 \<le> measure_pmf.prob (w_pmf N U) {w. alpha w F x = k \<and> w x = k}"
-                by auto
-              ultimately show "measure_pmf.prob (w_pmf N U) {w. alpha w F x = k \<and> w x = k} = 0"
-                by auto
-            qed
-            have "(\<Union>k::nat. {w. alpha w F x = k \<and> w x = k}) \<inter> set_pmf (w_pmf N U)
-                = (\<Union>k\<in>{1..N}. {w. alpha w F x = k \<and> w x = k}) \<inter> set_pmf (w_pmf N U)"
-            proof -
-              have "\<And>w k. w \<in> set_pmf (w_pmf N U) \<Longrightarrow> w x = k \<Longrightarrow> k \<in> {1..N}"
-                using w_pmf_component_in_range[OF \<open>x \<in> U\<close> \<open>N \<ge> 1\<close> \<open>finite U\<close>]
-                by auto
-              then show ?thesis by auto
-            qed
-            have "measure_pmf.prob (w_pmf N U) (\<Union>k::nat. {w. alpha w F x = k \<and> w x = k})
-                = measure_pmf.prob (w_pmf N U) ((\<Union>k::nat. {w. alpha w F x = k \<and> w x = k}) \<inter> set_pmf (w_pmf N U))"
-              by (rule measure_pmf.finite_measure_eq_AE) (auto simp: AE_measure_pmf_iff)
-            also have "measure_pmf.prob (w_pmf N U) ((\<Union>k::nat. {w. alpha w F x = k \<and> w x = k}) \<inter> set_pmf (w_pmf N U))
-                       = measure_pmf.prob (w_pmf N U) ((\<Union>k\<in>{1..N}. {w. alpha w F x = k \<and> w x = k}) \<inter> set_pmf (w_pmf N U))"
-              by (simp add: \<open>(\<Union>k. {w. alpha w F x = k \<and> w x = k}) \<inter> set_pmf (w_pmf N U) 
-                               = (\<Union>k\<in>{1..N}. {w. alpha w F x = k \<and> w x = k}) \<inter> set_pmf (w_pmf N U)\<close>)
-            also have "... = measure_pmf.prob (w_pmf N U) (\<Union>k\<in>{1..N}. {w. alpha w F x = k \<and> w x = k})"
-              by (rule measure_pmf.finite_measure_eq_AE[symmetric]) (auto simp: AE_measure_pmf_iff)
-            finally show ?thesis .
-          qed
-          ultimately show ?thesis by auto
-        qed
-        (*We must prove for any k = i or k = j where j \<noteq> i, they are independent,
-          So that we can sum the probabilities*)
-        have disjoint_sets: "pairwise (\<lambda>i j. {w. alpha w F x = i \<and> w x = i}
-                                            \<inter> {w. alpha w F x = j \<and> w x = j} = {}) {1..N}"
-          using pairwise_def by fastforce
-        (*Sum the probabilities*)
-        have union_to_sum:
-          "measure_pmf.prob (w_pmf N U)(\<Union>k\<in>{1..N}. {w. alpha w F x = k \<and> w x = k})
-           = (\<Sum>k\<in>{1..N}. measure_pmf.prob (w_pmf N U) {w. alpha w F x = k \<and> w x = k})"
-          by (subst measure_pmf.finite_measure_finite_Union) (auto simp: disjoint_family_on_def)
-        (*We want to prove that, the probability of w(x)= k is 1/N*)
-        have wx_uniform: "\<forall>k\<in>{1..N}. measure_pmf.prob (w_pmf N U) {w. w x = k} = 1 / real N"
-          sorry
-        (*then, we can replace the w(x) = k by 1/N for each k*)
-        have factor_each_k:
-          "\<forall>k\<in>{1..N}. measure_pmf.prob (w_pmf N U) {w. alpha w F x = k \<and> w x = k}
-                     = measure_pmf.prob (w_pmf N U) {w. alpha w F x = k} * (1 / real N)"
-          sorry
-        (*So, sum up the probability by simply replacing & distribution law*)
-        have calc_main:
-          "measure_pmf.prob (w_pmf N U) {w. alpha w F x = w x}
-           = (1 / real N) * (\<Sum>k\<in>{1..N}. measure_pmf.prob (w_pmf N U) {w. alpha w F x = k})"
-          using partition_prob union_to_sum factor_each_k
-          by (simp add: sum_distrib_left)
-        (*Independent, sum of all probability that alpha(x) = k is less or equal than 1*)
-        have sum_alpha_le1: "(\<Sum>k\<in>{1..N}. measure_pmf.prob (w_pmf N U) {w. alpha w F x = k}) \<le> 1"
-        proof -
-          have "(\<Sum>k\<in>{1..N}. measure_pmf.prob (w_pmf N U) {w. alpha w F x = k})
-               = measure_pmf.prob (w_pmf N U) (\<Union>k\<in>{1..N}. {w. alpha w F x = k})"
-            by (subst measure_pmf.finite_measure_finite_Union) (auto simp: disjoint_family_on_def)
-          also have "... \<le> 1" by (rule measure_pmf.prob_le_1)
-          finally show ?thesis .
-        qed
-        show ?thesis using calc_main sum_alpha_le1 by (simp add: divide_right_mono)
-      qed
-      show "measure_pmf.prob (w_pmf N U) {w. alpha w F x = w x} \<le> 1 / real N"
-        by (simp add: one_over_N_bound)
-    qed
-
-
+      apply (intro sum_mono[OF probx])
+      .
     (* Simplify sum *)
     also have "... = real(card U) / real N"
       using assms by simp
