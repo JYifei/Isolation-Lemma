@@ -32,35 +32,28 @@ lemma exist_minimizer:
   3. prove m is smaller or equal to other n*)
   assumes "F \<noteq> {}"
   obtains A where "A\<in>F" "minimizer F w A"
+
 proof-
   obtain S0 where "S0 \<in> F" using assms by auto
-  have sum: "\<exists>n::nat. \<exists>S\<in>F. wt w S = n" (*non-empty*)
-  proof- 
-    have "\<exists>S\<in>F. wt w S = wt w S0" 
-      using \<open>S0 \<in> F\<close> by auto
-    then show ?thesis by auto
-  qed
-
-  define m::nat where "m = (LEAST n. \<exists>S\<in>F. wt w S = n)"
-  from sum have "\<exists>S\<in>F. wt w S = m"
-    unfolding m_def by (rule LeastI_ex)
+  define m where "m =(LEAST n. \<exists>S\<in>F. wt w S = n) "
+  have "\<exists>S \<in> F. wt w S = m"
+    unfolding m_def
+    apply(rule LeastI_ex)
+    using \<open> S0\<in> F \<close> by auto
   then obtain A where "A\<in>F" and Awt: "wt w A = m" by auto
-
   have "\<forall>B\<in>F. wt w A \<le> wt w B"
-  proof
+  proof 
     fix B assume "B\<in>F"
-    have "\<exists>S\<in>F. wt w S = wt w B"
+    have "m \<le> wt w B"
+      unfolding m_def
+      apply (rule Least_le)
       using \<open>B\<in>F\<close> by auto
-    hence "m \<le> wt w B" 
-      unfolding m_def by (rule Least_le)
     thus "wt w A \<le> wt w B"
       using Awt by simp
   qed
-
   then show ?thesis using \<open>A\<in>F\<close> that
     unfolding minimizer_def by blast
 qed
-
 
 lemma no_unique_minimizer :
   (*From exist_minimizer, there must exist at least one minimizer
@@ -68,14 +61,12 @@ lemma no_unique_minimizer :
   assumes "F \<noteq> {}" "\<not>has_unique_minimizer F w"
   obtains A B where "minimizer F w A" "minimizer F w B " "A \<noteq> B" "A \<in> F" "B \<in> F"
 proof - 
-  obtain A where A: "A\<in>F" "minimizer F w A"
+  obtain A where "A\<in>F" "minimizer F w A"
     using exist_minimizer [OF assms(1)] by auto
-
-  obtain B where B: "B \<in> F" "minimizer F w B" "B \<noteq> A" 
-    using assms(2) A unfolding has_unique_minimizer_def 
-    by auto
-  show ?thesis
-    using A B that by blast
+  then obtain B where "B \<in> F" "minimizer F w B" "B \<noteq> A" 
+    using assms(2) unfolding has_unique_minimizer_def by auto
+  then show ?thesis
+    using \<open>A\<in>F\<close> \<open>minimizer F w A\<close> that by blast
 qed
 
 lemma two_minimizers_not_unique:
@@ -86,19 +77,17 @@ lemma two_minimizers_not_unique:
   shows "\<not>has_unique_minimizer F w"
 proof
   assume "has_unique_minimizer F w"
-  then obtain X where X: "X\<in>F \<and> minimizer F w X"
-    and unique: "\<forall>Y. Y\<in>F \<and> minimizer F w Y \<longrightarrow> Y = X"
+  then obtain X where "X\<in>F" "minimizer F w X"
+    "\<forall>Y. Y\<in>F \<and> minimizer F w Y \<longrightarrow> Y = X"
     unfolding has_unique_minimizer_def by auto
-  from unique \<open>A \<in> F\<close> \<open>minimizer F w A\<close> have "A = X" by auto
-  from unique \<open>B \<in> F\<close> \<open>minimizer F w B\<close> have "B = X" by auto
-  hence "A = B" using \<open>A = X\<close> \<open>B = X\<close> by simp
-  with assms(3) show False by simp
+  hence "A = X" "B = X" using assms(1,2,4,5) by auto
+  thus False using assms(3) by simp
 qed
 
 lemma not_unique_iff_exist_two:
   assumes "F \<noteq> {}"
-  shows "\<not> has_unique_minimizer F w
-         \<longleftrightarrow> (\<exists>A B. A \<in> F \<and> B \<in> F \<and> minimizer F w A \<and> minimizer F w B \<and> A \<noteq> B)"
+  shows "\<not> has_unique_minimizer F w  \<longleftrightarrow> 
+        (\<exists>A B. A \<in> F \<and> B \<in> F \<and> minimizer F w A \<and> minimizer F w B \<and> A \<noteq> B)"
   by (metis assms no_unique_minimizer two_minimizers_not_unique)
 
 
@@ -130,15 +119,10 @@ proof -
   have witness: "\<exists>S\<in>F. x \<notin> S \<and> wt w S = wt w B"
     using B_inF assms(2) by auto
   have least: "\<And>n. (\<exists>S\<in>F. x \<notin> S \<and> wt w S = n) \<Longrightarrow> wt w B \<le> n"
-  proof - 
-    fix n assume "\<exists>S\<in>F. x \<notin> S \<and> wt w S = n"
-    then obtain S where "S\<in>F" "x\<notin>S" "wt w S = n" by auto
-    hence "wt w B \<le> wt w S" using B_le by auto
-    thus "wt w B \<le> n" using \<open>wt w S = n\<close> by auto
-  qed
-
+    using B_le by auto
 show ?thesis
-  by (smt (verit) B_le Least_equality witness) 
+  apply (rule Least_equality)
+  using witness least by auto
 qed
 
 lemma wt_split_point:
@@ -176,7 +160,10 @@ proof -
       using wt_split_point[OF finA assms(4)] wt_split_point[OF finS xin] by simp
     thus "wt w (A - {x}) \<le> n" using Sres by simp
   qed
-  show ?thesis by (smt (verit, del_insts) LeastI2_wellorder_ex Least_le least order_antisym_conv witness)
+  show ?thesis
+    apply (rule Least_equality)
+    using witness apply blast
+    using least by simp
 qed
 
 lemma wt_cong_on:
@@ -638,17 +625,7 @@ qed
       qed
     ultimately show
       "measure_pmf.prob (w_pmf N U) {w. alpha w F x = w x} \<le> 1 / N"
-      using assms(4)
-        frac_le[of "1"
-          "\<Sum>uud = 1..N.
-          measure_pmf.prob (w_pmf N U)
-           {uuc. alpha uuc F x = uud}"
-          "real N" "real N"]
-        times_divide_eq_left[of "1" "real N"
-          "\<Sum>uud = 1..N.
-          measure_pmf.prob (w_pmf N U)
-           {uuc. alpha uuc F x = uud}"]
-      by linarith
+      using assms(4) by (simp add: divide_simps)
   qed
 
   (* bad case upper bound *)
@@ -669,13 +646,11 @@ qed
     qed
     (* union bound *)
     also have "... \<le> (\<Sum>x\<in>U. measure_pmf.prob (w_pmf N U) {w. alpha w F x = w x})"
-      apply (intro measure_UNION_le)
-      by (auto simp add: assms(1))
+      using assms(1) by (intro measure_UNION_le) auto
 
     (* each term \<le> 1/N *)
     also have "... \<le> (\<Sum>x\<in>U. 1 / real N)"
-      apply (intro sum_mono[OF probx])
-      .
+      by (intro sum_mono[OF probx])
     (* Simplify sum *)
     also have "... = real(card U) / real N"
       using assms by simp

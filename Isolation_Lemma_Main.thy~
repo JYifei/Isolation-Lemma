@@ -336,13 +336,11 @@ lemma set_pmf_w_pmf:
   unfolding w_pmf_def set_Pi_pmf[OF assms]
   ..
 
-
 lemma alpha_measurable:
   assumes "finite U" "F \<subseteq> Pow U" "x \<in> U"
   shows "(\<lambda>f. alpha (\<lambda>y. if y \<in> U-{x} then f y else 0) F x) 
          \<in> (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV)) \<rightarrow>\<^sub>M (count_space UNIV)"
-proof -
-  
+proof - 
   have wt_meas: "\<And>S. finite S \<Longrightarrow> S \<subseteq> U \<Longrightarrow>
     (\<lambda>f. wt (\<lambda>y. if y \<in> U-{x} then f y else (0::nat)) S) 
     \<in> (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV)) \<rightarrow>\<^sub>M (count_space UNIV)"
@@ -363,19 +361,84 @@ proof -
           by (auto simp: measurable_count_space_eq2)
       next
         case False
-        then have "\<And>f. (if y \<in> U-{x} then f y else 0) = 0"
+        then have eq: "(\<lambda>f. if y \<in> U-{x} then f y else 0) = (\<lambda>f. 0)"
           by auto
-        then have "(\<lambda>f. if y \<in> U-{x} then f y else 0) = (\<lambda>f. 0)"
-          by auto
-        then show ?thesis
-    qed (use \<open>finite S\<close> in auto)
-    finally show "(\<lambda>f. wt (\<lambda>y. if y \<in> U-{x} then f y else 0) S) 
-                  \<in> (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV)) \<rightarrow>\<^sub>M (count_space UNIV)" .
+        show ?thesis
+          unfolding eq
+          by (rule measurable_count_space_const)
+      qed
+    qed
+    then show "(\<lambda>f. wt (\<lambda>y. if y \<in> U-{x} then f y else 0) S) 
+            \<in> (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV)) \<rightarrow>\<^sub>M (count_space UNIV)"
+      by (simp add: wt_def) 
+  qed
+
+  have pred_for_S: "\<And>S n. S \<in> F \<Longrightarrow>
+    Measurable.pred (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV))
+      (\<lambda>f. x \<notin> S \<and> wt (\<lambda>y. if y \<in> U-{x} then f y else 0) S = n)"
+  proof -
+    fix S n assume "S \<in> F"
+    from assms(2) \<open>S \<in> F\<close> have "S \<subseteq> U" by auto
+    from assms(1) \<open>S \<subseteq> U\<close> have "finite S"
+      by (simp add: finite_subset)
+    show "Measurable.pred (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV))
+            (\<lambda>f. x \<notin> S \<and> wt (\<lambda>y. if y \<in> U-{x} then f y else 0) S = n)"
+      using wt_meas[OF \<open>finite S\<close> \<open>S \<subseteq> U\<close>]
+      by (auto intro: Measurable.pred_intros_logic simp: measurable_count_space_eq2)
+  qed
+  have finite_F: "finite F"
+    using assms(1,2) finite_subset by auto  
+  have pred_exist_1: "\<And>n. Measurable.pred (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV))
+                        (\<lambda>f. \<exists>S\<in>F. x \<notin> S \<and> wt (\<lambda>y. if y \<in> U-{x} then f y else 0) S = n)"
+  proof -
+    fix n
+    show "Measurable.pred (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV))
+            (\<lambda>f. \<exists>S\<in>F. x \<notin> S \<and> wt (\<lambda>y. if y \<in> U-{x} then f y else 0) S = n)"
+      apply (rule Measurable.pred_intros_finite(4)[OF finite_F])
+      using pred_for_S by auto
+  qed
+
+  have least_1_meas: "(\<lambda>f. LEAST n. \<exists>S\<in>F. x \<notin> S \<and> wt (\<lambda>y. if y \<in> U-{x} then f y else 0) S = n)
+                     \<in> (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV)) \<rightarrow>\<^sub>M (count_space UNIV)"
+    using Measurable.measurable_Least[OF pred_exist_1] .
+
+  have pred_for_S_2: "\<And>S n. S \<in> F \<Longrightarrow>
+    Measurable.pred (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV))
+      (\<lambda>f. x \<in> S \<and> wt (\<lambda>y. if y \<in> U-{x} then f y else 0) (S-{x}) = n)"
+  proof -
+    fix S n assume "S \<in> F"
+    from assms(2) \<open>S \<in> F\<close> have "S \<subseteq> U" by auto
+    from assms(1) \<open>S \<subseteq> U\<close> have "finite S"
+      by (simp add: finite_subset)
+    have "finite (S-{x})" using \<open>finite S\<close> by auto
+    have "S-{x} \<subseteq> U" using \<open>S \<subseteq> U\<close> by auto
+    
+    show "Measurable.pred (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV))
+            (\<lambda>f. x \<in> S \<and> wt (\<lambda>y. if y \<in> U-{x} then f y else 0) (S-{x}) = n)"
+      using wt_meas[OF \<open>finite (S-{x})\<close> \<open>S-{x} \<subseteq> U\<close>]
+      by (auto intro: Measurable.pred_intros_logic simp: measurable_count_space_eq2)
   qed
   
+  have pred_exist_2: "\<And>n. Measurable.pred (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV))
+                        (\<lambda>f. \<exists>S\<in>F. x \<in> S \<and> wt (\<lambda>y. if y \<in> U-{x} then f y else 0) (S-{x}) = n)"
+  proof -
+    fix n
+    show "Measurable.pred (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV))
+            (\<lambda>f. \<exists>S\<in>F. x \<in> S \<and> wt (\<lambda>y. if y \<in> U-{x} then f y else 0) (S-{x}) = n)"
+      apply (rule Measurable.pred_intros_finite(4)[OF finite_F])
+      using pred_for_S_2 by auto
+  qed
+  
+  have least_2_meas: "(\<lambda>f. LEAST n. \<exists>S\<in>F. x \<in> S \<and> wt (\<lambda>y. if y \<in> U-{x} then f y else 0) (S-{x}) = n)
+                     \<in> (Pi\<^sub>M (U-{x}) (\<lambda>_. count_space UNIV)) \<rightarrow>\<^sub>M (count_space UNIV)"
+    using Measurable.measurable_Least[OF pred_exist_2] .
+
   show ?thesis
-    sorry
+    unfolding alpha_def
+    using least_1_meas least_2_meas
+    by (simp add: measurable_count_space_eq2)
 qed
+
 
 theorem isolation_lemma_main :
   fixes U :: "'a set" and F :: "'a set set" and N :: nat
