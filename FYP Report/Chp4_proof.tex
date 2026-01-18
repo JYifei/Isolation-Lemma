@@ -1,0 +1,254 @@
+\chapter{Proof Construction}
+\label{chp:proof}
+
+In this chapter, we present the formal proof of the Isolation Lemma.
+The proof follows the structure imposed by the formal development in Isabelle/HOL and proceeds by progressively reducing the failure of uniqueness to a simple probabilistic event.
+Unlike pen-and-paper proofs, several steps that are implicit or informal in standard proofs must be mad explicit in formal settings, including existential witnesses, measuability, independence, type correctness, and totality.
+
+In the following sections, we organize the proof as a sequence of structural reductions.
+We begin by establishing the existence of minimizers and by reformulating its non-uniqueness in a constructive form.
+Then we analyze the auxiliary quantity $\alpha(x)$, which plays a central role in isolating the dependence on individual weights.
+Such analysis leads to a characterization of non-uniqueness as a collision event of the form $w(x) = \alpha(x)$.
+Finally, we bound the probability of such events using the product probability space constructed in Chapter~\ref{chp:modeling}.
+
+\section{Existence of Minimizers}
+\label{sec:existence}
+
+Before analyzing the uniqueness of minimizers, we must first ensure that the notion of a minimizer is well-defined.
+In particular, for a given family of sets $\mathcal{F}$ and a weight function $w$, it is necessary to establish that at least one minimizer exists whenever $\mathcal{F}$ is non-empty.
+
+Although the existence of a minimum is intuitively clear when weights take values in the natural numbers, such arguments cannot be taken for granted in the formal setting.
+All existence claims must be derived explicitly from previously stated assumptions.
+In a formal setting, this step is not merely a formality.
+The following definitions and arguments rely on the this predicate as a non-vacuous object, and constructions such as the \texttt{LEAST} operator require the existence of witnesses to be established explicitly.
+Isolating the existence of minimizers at this stage allows later proofs to proceed without repeatedly discharging existence conditions.
+
+Formally, we show that for any non-empty family $\mathcal{F}$, there exists a set $A \in \mathcal{F}$ whose total weight is minimal among all elements of $\mathcal{F}$.
+That is, $A$ satisfies the minimizer predicate introduced in Chapter~\ref{chp:modeling}.
+This result is captured by the following lemma in Isabelle/HOL.
+
+\medskip
+
+\noindent
+\textbf{Lemma (Existence of a Minimizer).}
+\emph{If $\mathcal{F} \neq \emptyset$, then there exists a set
+$A \in \mathcal{F}$ such that $A$ is a minimizer of $\mathcal{F}$ under
+the weight function $w$.}
+
+\medskip
+
+This lemma is formalized as \texttt{exist\_minimizer} in the Isabelle development.
+The proof constructs a concrete witness $A \in \mathcal{F}$ whose weight is minimal with respect to all other elements of $\mathcal{F}$, thereby ensuring that the minimizer predicate is non-vacuous.
+
+The existence of such a minimizer allows us to reason about minimizers without introducing additional existence assumptions in subsequent arguments.
+It also enables a constructive analysis of non-uniqueness, which will be the focus of the next section.
+
+\section{Reformulating the Non-Uniqueness}
+\label{sec:non-unique}
+
+The Isolation Lemma concerns the probability that the minimizer of $\mathcal{F}$ under a random weight function $w$ is unique.
+In order to reason about the failure of uniqueness in a formal setting, it is necessary to make this notion explicit and structurally usable.
+
+In pen-and-paper proofs, non-uniqueness is often handeled informally by arguing that "there exist at least two different minimizers".
+However, in a proof assistant such as Isabelle/HOL, statements involving negation of uniqueness cannot be used directly.
+Instead, non-uniqueness must be reformulated as a positive existential statement that provides concrete witnesses.
+
+From a logical perspective, this reformulation eliminates the negation of a unique existential statement to a explicit existential formulation.
+Concretely, the minimizer of $\mathcal{F}$ under $w$ is not unique if and only if there exist two distinct sets $A$ and $B$ in $\mathcal{F}$ such that both satisfy the minimizer predicate.
+That is, non-uniqueness can be charaterized by the existence of $A \neq B$ with
+\[
+A \in \mathcal{F}, \quad B \in \mathcal{F}, \quad
+\text{and} \quad
+\forall S \in \mathcal{F}, \;
+w(A) \le w(S) \;\land\; w(B) \le w(S).
+\]
+Since both $A$ and $B$ satisfy the minimizer predicate, it follows immediately that they attain the same total weight.
+
+This reformulation plays a crucial role in the formal proof.
+By providing explicit witnesses $A$ and $B$, it allows subsequent arguments to fix such minimizers and analyze their structural relationship.
+In particular, it enables reasoning about elements in the symmetric difference between $A$ and $B$, which forms the bases of the collision characterization developed later.
+
+In the Isabelle/HOL development, this step is realized by unfolding the definition of the unique existential quantifier and reasoning with explicit minimizer predicates.
+Although mathematically straightforward, making this reformulation explicit is essential for enabling later arguments that fix concrete minimizers and reason about their set-theoretic structure.
+
+
+\section{The Alpha Construction}
+\label{sec:alpha}
+
+A central ingredient in the proof of the Isolation Lemma is the auxiliary quantity $\alpha(x)$ associated with each element $x \in U$.
+Intuitively, $\alpha(x)$ isolates the dependence of the total weight of a set on the individual weight $w(x)$, allowing us to reason about the effect of modifying a single coordinate.
+
+Formally, $\alpha(x)$ is defined as the difference between two minimal weight values determined by the family $\mathcal{F}$.
+The first term represents the minimum total weight among all sets in $\mathcal{F}$ that do not contain $x$.
+The second term represents the minimum residual weight required to form a set in $\mathcal{F}$ that contains $x$, excluding the contribution of $x$ itself.
+This definition was introduced by Mulmuley et al.\ and plays a crucial role in isolating single-coorrdinate events.
+
+\medskip
+
+In our formalization, $\alpha(x)$ is defined using Isabelle's \texttt{LEAST} operator, which selects the least natural number satisfying a given predicate.
+At this stage, $\alpha(x)$ is treated as an abstract quantity defined in terms of minimal weights, without assuming that the minima are realized by any particular sets.
+
+\medskip
+
+In the present chapter, we analyze its properties and show how the abstract \texttt{LEAST}-based definition can be simplifies in subsequent arguments, once the existence of minimizers has been derived.
+
+\subsection{Simplifying the Definition of \texorpdfstring{$\alpha(x)$}{alpha(x)}}
+
+The definition of $\alpha(x)$ involves two instances of the \texttt{LEAST} operator, each ranging over a family of sets in $\mathcal{F}$.
+While this formalization is convenient at the modeling stage, it is too abstract to be used directly in the subsequent analysis, since the operator \texttt{LEAST} is not computationally usable in formal proof.
+
+Once the existence of minimizers has been established, the two minimization terms appearing in the definition of $\alpha(x)$ can be simplified to concrete weighth values.
+More precisely, it can be shown that the minimal values selected by the \texttt{LEAST} operator are realized by specific minimizers, depending on whether one element $x$ is contained in the minimizing set.
+
+\medskip
+
+First, suppose that $B$ is a minimizer of $\mathcal{F}$ under the weight function $w$, and that $x \notin B$.
+In this case, $B$ satisfies the defining predicate of the first \texttt{LEAST} expression in the definition of $\alpha(x)$.
+As a result, the minimum total weight among all sets in $\mathcal{F}$ that do not contain $x$ is attained by $B$, and the first \texttt{LEAST} expression can be shown equal to the concrete value $W(B)$.
+
+\medskip
+
+Second, suppose that $A$ is a minimizer of $\mathcal{F}$ and that $x \in A$.
+Removing $x$ from $A$ yields a residual set whose total weight equals $w(A) - w(x)$.
+By showing the $A$ satisfies the defining predicate of the second \texttt{LEAST} expression, the minimum total weight among all residual weights of sets in $\mathcal{F}$ that contain $x$ can be related to the concrete value $w(A \setminus \{x\})$.
+
+\medskip
+
+These observations are formalized by two auxiliary lemmas in the Isabelle development.
+They connect the abstract \texttt{LEAST} expressions appearing in the definition of $\alpha(x)$ with concrete weights of minimizers.
+Together, they allow $\alpha(x)$ to be rewritten in terms of ordinary arithmetic expressions whenever suitable minimizers are available.
+
+\section{Independence of \texorpdfstring{$\alpha(x)$}{alpha(x)} from Individual Weights}
+\label{sec:alpha_independence}
+
+A crucial property of the auxiliary quantity $\alpha(x)$ is that it does not depend on the value of the individual weight $w(x)$.
+Instead, $\alpha(x)$ is determined entirely by the weights assigned to those elements other than $x$.
+This independence property forms the bridge between the structural analysis of minimizers and the probabilistic argument that follows.
+
+To make this statement precise, consider two different weight functions $w$ and $w'$ that coincide on all elements of $u \setminus \{x\}$, but may differ in the value assigned to $x$.
+Changing the value of $w(x)$ shifts the total weight of every set containing $x$ by the same offset, while leaving the relative ordering of weights determined by the remaining elements unchanged.
+As a consequence, the minimal values appearing in the definition of $\alpha(x)$ can be shown to be invariant under such changes.
+
+\medskip
+
+Formally, we prove that if two weight functions agree on $U \setminus \{x\}$, then the corresponding values of $\alpha(x)$ are equal.
+That is, $\alpha(x)$ depends only on the restrictions of the weight funcion to the complement of $\{x\}$.
+This statement is captured by the following lemma in the Isabelle development.
+
+\medskip
+
+\noindent
+\textbf{Lemma (Independence of $\alpha(x)$).}
+\emph{Let $w$ and $w'$ be two weight functions such that $w(y) = w'(y)$ for all $y \in U \setminus \{x\}$.
+Then $\alpha(x)$ computed with respect to $w$ is equal to $\alpha(x)$ computed with respect to $w'$.}
+
+\medskip
+
+This lemma is formalized as \texttt{alpha\_independent\_of\_coord} in Isabelle/HOL.
+Its proof relies on the simplification of the \texttt{LEAST} expressions established in the previous section, together with basic congruence properties of addition and inequality on natural numbers.
+
+The independence of $\alpha(x)$ from $w(x)$ is the key technical fact that enables the probabilistic analysis.
+Once the weights of all other elements have been fixed, $\alpha(x)$ becomes a constant with respect to the remaining random choice of $w(x)$.
+Consequently, the event $w(x) = \alpha(x)$ can be treated as a single-coordinate event in the product probability space, with a simple and uniform probability bound.
+
+\section{Collision characterization via \texorpdfstring{$\alpha(x)$}{alpha(x)}}
+\label{sec:collision}
+
+We now establish the key structural link between the failure of uniqueness and the auxiliary quantity $\alpha(x)$.
+Specifically, we show that if the minimizer of $\mathcal{F}$ under a weight function $w$ is not unique, then this non-uniqueness much be witnessed by a collision event of the form $w(x) = \alpha(x)$ for some element $x \in U$.
+
+Suppose that the minimizer is not unique.
+By the reformulation of non-uniqueness, this implies the existence of two distinct minimizer $A$ and $B$ in $\mathcal{F}$ under the same weight function $w$.
+Since $A \neq B$, their symmetric difference in non-empty.
+By symmetry, we may assume without loss of generality that there exists an element $x \in A \setminus B$.
+
+\medskip
+
+Because both $A$ and $B$ are minimizers, they have equal total weight, that is, $w(A) = w(B)$.
+Applying the simplifications of the \texttt{LEAST} expressioons established in Section~\ref{sec:alpha}, we can express $\alpha(x)$ entirely in terms of the weight of $A$ and $B$.
+
+Since $x \notin B$, the minimum total weight among all sets in $\mathcal{F}$ that do not contain $x$ is realized by $B$
+Similarly, since $x \in A$, the minimum residual weight among all sets in $\mathcal{F}$ that contain $x$ in realized by the residual set $A \setminus \{x\}$.
+Combining these observations yields
+\[
+\alpha(x)
+= w(B) - w(A \setminus \{x\})
+= w(A) - \bigl(w(A) - w(x)\bigr)
+= w(x).
+\]
+
+Thus, the failure of uniqueness implies the existence of an element $x \in U$ such that the individual weight $w(x)$ coincides with $\alpha(x)$.
+
+\medskip
+
+This argument if formalized in Isabelle/HOL by the lemma \texttt{two\_minimizers\_alpha\_eq}, which shows that whenever two distinct minimizers exist, a corresponding collision event $w(x) = \alpha(x)$ must occur for some $x \in U$.
+
+As a consequence, the event that the minimizer is not unique is contained in the union of the single-coordinate events $\{\, w(x) = \alpha(x) \mid x \in U \, \}$.
+This reduction transforms the global failure of uniqueness into a collection of simple local events, paving the way for the probabilistic analysis inthe next section.
+
+\section{Probabilistic Analysis and Final Bound}
+\label{sec:probability}
+
+We will now complete the proof of the Isolation Lemma by bounding the probability that the minimizer of $\mathcal{F}$ is not unique under a random weight assignment.
+Throughout this section, weights are sampled according to the product probability space constructed in Chapter~\ref{chp:modeling}.
+Unlike pen-and-paper arguments, all probabilistic statements here are interpreted with respect to an explicitly constructed probability mass function.
+
+\medskip
+
+By the collision characterization established in Section~\ref{sec:collision}, the event that the minimizer is not unique can be reduced to a union simple single-coordinate events.
+More precisely, we have
+\[
+\{\, \text{the minimizer is not unique} \,\}
+\subseteq
+\bigcup_{x \in U} \{\, w(x) = \alpha(x) \,\}.
+\]
+This reduction transforms a global structural failure into a collection of local equality event, each involving only a single random variable.
+
+\medskip
+
+\paragraph{Single-coordinate probability bound.}
+Fix an arbitrary element $x \in U$.
+By the independence property proved in Section~\ref{sec:alpha_independence}, the auxiliary quantity $\alpha(x)$ depends only on the weights assigned to elements in $U \setminus \{x\}$.
+Consequently, once the weights of all other elements have been fixed, $\alpha(x)$ becomes a constant with respect to the remaining random choice of $w(x)$.
+
+Under the product probability space, the random variable $w(x)$ is distributed uniformly over the finite set $\{1 ,\dots,N\}$ and is independent of all other coordinates.
+Consequently, the probability that $w(x)$ attains any particular value is exactly $1/N$.
+In particular, we obtain the bound
+\[
+\Pr\bigl[\, w(x) = \alpha(x) \,\bigr] \le \frac{1}{N}.
+\]
+
+\medskip
+
+\paragraph{Formalization considerations.}
+Although the above argument is mathematically straightforward, its formalization requires several non-trivial steps.
+In particular, the event $\{ w(x) = \alpha(x) \}$ must be shown to be a measurable event in the underlying probability space.
+This relies on the measurability of the function $\alpha(x)$, which is itself defined using minimum operators over finite families of sets.
+
+Furthermore, the independence arguments depend on the fact that the product probability space assigns weights to to different elements of $U$ independently.
+In the Isabelle/HOL development, this property is derived explicitly from the construction of the product PMF using the \texttt{Pi\_pmf} operator, rather than being assumed implicitly.
+These considerations account for a substantial portion of the formal proof effort, even though they are typically omitted in pen-and-paper proofs.
+
+\medskip
+
+\paragraph{Union bound and final estimate.}
+Since the universe $U$ is finite, we may apply the union bound to the collection of collision events.
+Summing the individual bounds yields
+\[
+\Pr\bigl[\, \text{the minimizer is not unique} \,\bigr]
+\le \sum_{x \in U} \Pr\bigl[\, w(x) = \alpha(x) \,\bigr]
+\le \frac{|U|}{N}.
+\]
+Equivalently, the probability that the minimizer is unique is bounded by
+\[
+\Pr\bigl[\, \text{the minimizer is unique} \,\bigr]
+\ge 1- \frac{|U|}{N}
+\]
+
+\medskip
+
+This inequality constitutes the statement of the Isolation Lemma.
+In the Isabelle/HOL development, the above reasoning is formalized using standard results from the \texttt{HOL-Probability} library, including measurability lemmas for derived random variables and the union bound for finite collections of events.
+The final result is captured by the theorem \texttt{isolation\_lemma\_main}, which completes the formal proof.
+
+

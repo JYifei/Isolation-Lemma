@@ -1,0 +1,50 @@
+\chapter{Introduction}
+\label{chp:intro}
+\section{Background}
+
+Randomized Algorithms plays a fundamental role in theortical computer science.
+
+Unlike deterministic algorithms, randomized algorithms incorporate randomness to break symmetry, simplify theoretical constructions, and achieve improved performance in expectations.
+Such algorithms have been widely used in matching problems, parallel computing, approximation algorithms and constructions of complex combinatorial structures.
+
+In many classical results, the introduction of randomized weights serves as a general technique for enforcing certain "uniqueness" or "isolation" properties.
+For example, in several parallel computing algorithms and combinatorial optimization problems, algorithmic correctness relies on the fact that, after a random pertubation, a minimum structure becomes unique with high probability.
+
+The Isolation Lemma is a canonical instance of this principle. Informally, this lemma states that when random weight are assigned independently to elements of a finite universe, there is a high probability that a unique minimum-weight set exists within a given family of subsets.
+This lemma provides a theortical foundation for numerous randomized algorithms and plays a critical role in algorithmic frameworks for problems such as Perfect Matching.
+
+\section{Motivation}
+Although randomized algorithm have achieved significant success in both theory and practice, their correctness often rely on informal probabilistic and combinatorial reasooning.
+In traditional pen-and-paper proof, conclusions such as “a minimum obviously exists”, “this event occurs with probability at most 1/N”, or “the relevant events are independent” are frequently treated as self-evident and left implicit.
+
+In a formal proof setting, however, such assumptions cannot be taken for granted. All logical dependencies must be stated explicitly and verified.
+For instance, the existence of a minimum depends on the non-emptoness and finiteness of the underlying set; probability statements requires measurability; and independence cannot be asserted informally, but must be derived from the explicit construction of the probability space.
+
+As a consequence, randomized algorithms and their associated lemmas becomes constitute a particularly challenging class of objects for Interactive Theorem Proving(ITP). 
+On the one hand, they occupy a central position in theortical computer science; on the other hand, they clearly demonstrate the strength of formal verification in clarifying hidden assumptions and exposing implicit reasoning steps.
+
+This project is motivated by these considerations and aims to reconstruct the complete proof of Isolation Lemma within a fully formalized and rigorous framework.
+
+\section{Project Objectives}
+The primary objective of this project is to forrmally model and prove Isolation Lemma formally within the Isabelle/HOL theorem proving system.
+This task goes beyond stating the lemma and its probability bound; it also involves formalizing the underlying probability space, defining minimization structures precisely, and providing a structural characterization of non-uniqueness.
+
+Specifically, this project aims to:
+
+Formalize random weight function together with its corresponding product probability space;
+Provide a complete formal proof of the Isolation Lemma, including an explicit the upper bound on the probability of non-uniqueness.
+Apply the lemma to the correctness analysis of randomized algorithms.
+
+As a concrete application, this project employes the Isolation Lemma to verify a key probabilitic argument in a randomized perfect algorithm for the Perfect Matching problem, thereby illustrating the practical relevance of the lemma within algorithmic theory.
+
+\section{Scope of Work}
+The scope of this project in primarily focused on theoretical formalization and proof construction.
+In particular, this report covers:
+
+The mathematical formulation of the Isolation Lemma and its formal experssion;
+The probabilistic modeling of random weight assignments and their associated properties;
+The formalization of critical construction steps within the proof;
+A representative application of the lemma to the Perfect Matching Problems.
+
+This work does not address general derandomization techniques for randomized algorithms, nor does it consider implementation-level concerns or performance optimization of specific algorithm.
+Moreover, the internal implementation details of the Isabelle/HOL system and its underlying logical foundations is beyond the scope of this report.
