@@ -818,6 +818,83 @@ end
 
 (*TODO: Probability of Case 3 \<le> 1/2 (m/2m)*)
 
+(*
+   Isolation Lemma (Set Theory)     Graph Theory Representation
+   Universe (U)                     The set of all edges E
+   Element (x \<in> U)                  A single edge (i, j)
+   Weight function (w)              The edge weight matrix w
+   Feasible Solution (S)            A perfect matching p (as a set of edges)
+   Family of Solutions (F)          The collection of all valid perfect matchings(set of sets)
+*)
+
+definition matching_to_set :: 
+    "nat \<Rightarrow> (nat \<Rightarrow> nat) \<Rightarrow> (nat \<times> nat) set" where 
+    "matching_to_set n p = {(i, p i)| i. i < n}"
+
+definition perfect_matching_family :: 
+    "nat \<Rightarrow> (nat \<times> nat) set \<Rightarrow> ((nat \<times> nat) set) set" where
+    "perfect_matching_family n E = 
+      {matching_to_set n p | p. p permutes{0..<n} \<and> (\<forall>i < n. (i, p i) \<in> E)}"
 
 
+context bipartite_graph
+begin
+lemma pm_iso_equivalence:
+  fixes w_func :: "nat \<times> nat \<Rightarrow> nat"
+  
+  shows "bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w_func(u,v)) E \<longleftrightarrow> has_unique_minimizer (perfect_matching_family n E) w_func"
+
+proof -
+  let ?Graph_Cond = "bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w_func(u,v)) E"
+  let ?F = "perfect_matching_family n E"
+  let ?Set_Cond = "has_unique_minimizer (perfect_matching_family n E) w_func"
+
+  show "?Graph_Cond \<longleftrightarrow> ?Set_Cond"
+  proof 
+    assume ?Graph_Cond
+    show ?Set_Cond
+      sorry
+  next
+    assume ?Set_Cond
+    show ?Graph_Cond
+      sorry
+  qed
+qed
+
+
+
+lemma isolation_lemma_for_perfect_matching:
+  fixes N :: nat
+  assumes "N \<ge> 1"
+  assumes "\<exists>p. is_perfect_matching p"
+
+shows "measure_pmf.prob (w_pmf N E)
+      {w. bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w(u,v)) E}
+      \<ge> 1 - (real (card E)/ real N)"
+proof -
+  let ?U = E
+  let ?F = "perfect_matching_family n E"
+
+  have condition_eq: 
+    "{w. bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w(u,v)) E} = {w. has_unique_minimizer ?F w}"
+    sorry
+
+  have "finite ?U"
+    sorry
+
+  have "?F \<subseteq> Pow ?U"
+    sorry
+
+  have "?F \<noteq> {}"
+    sorry
+
+  have prob_bound: "measure_pmf.prob (w_pmf N ?U){w. has_unique_minimizer ?F w} \<ge> 1 - real(card ?U)/real N"
+    using isolation_lemma_main[of ?U ?F N]
+    using `finite ?U` `?F \<subseteq> Pow ?U` `?F \<noteq> {}` `N \<ge> 1` 
+    by simp
+
+  show ?thesis
+    by (simp add: condition_eq prob_bound)
+qed
+end
 end

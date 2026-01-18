@@ -816,7 +816,7 @@ next
 qed
 end
 
-(*TODO: Probability of Case 3 \<le> 1/2 (m/2m)*)
+(* Probability of Case 3 \<le> |E|/N *)
 
 (*
    Isolation Lemma (Set Theory)     Graph Theory Representation
@@ -836,21 +836,276 @@ definition perfect_matching_family ::
     "perfect_matching_family n E = 
       {matching_to_set n p | p. p permutes{0..<n} \<and> (\<forall>i < n. (i, p i) \<in> E)}"
 
-
 context bipartite_graph
 begin
+
+lemma matching_to_set_inj:
+  assumes "p permutes {0..<n}" "q permutes {0..<n}"
+  assumes "matching_to_set n p = matching_to_set n q"
+  shows "p = q"
+proof -
+  have "\<forall> i < n. p i = q i"
+  proof (intro allI impI)
+    fix i assume "i < n"
+    have "(i, p i) \<in> matching_to_set n p"
+      using `i < n` matching_to_set_def by auto
+
+    then have "(i,p i) \<in> matching_to_set n q"
+      using assms(3) by simp
+
+    then show "p i = q i"
+      using matching_to_set_def `i < n` by auto
+
+  qed
+  then show "p = q"
+    by (metis (no_types, lifting) ext assms(1,2) atLeastLessThan_iff
+        permutes_not_in)
+qed
+
+lemma weight_equivalence:
+  assumes "p permutes {0..<n}"
+  shows "wt w_func (matching_to_set n p) = bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) p"
+proof -
+  have inj_proof: "inj_on (\<lambda>i. (i, p i)) {0..<n}"
+    by (auto simp: inj_on_def)
+
+  have set_is_image: "matching_to_set n p = (\<lambda>i. (i, p i)) ` {0..<n}"
+    unfolding matching_to_set_def image_def by auto
+
+  have "wt w_func (matching_to_set n p) = (\<Sum>e \<in> (matching_to_set n p). w_func e)"
+    unfolding wt_def ..
+    
+  also have "... = (\<Sum>i \<in> {0..<n}. w_func (i, p i))"
+    unfolding matching_to_set_def
+    using sum.reindex[OF inj_proof]
+    using matching_to_set_def set_is_image by auto 
+
+  also have "... = bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) p"
+    unfolding bipartite_graph.matching_weight_def by simp
+
+  finally show ?thesis by simp
+qed
+
+
+lemma pm_iso_equivalence:
+  fixes w_func :: "nat \<times> nat \<Rightarrow> nat"
+  
+  shows "bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w_func(u,v)) E \<longleftrightarrow> has_unique_minimizer (perfect_matching_family n E) w_func"
+
+proof -
+  let ?Graph_Cond = "bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w_func(u,v)) E"
+  let ?F = "perfect_matching_family n E"
+  let ?Set_Cond = "has_unique_minimizer (perfect_matching_family n E) w_func"
+
+  show "?Graph_Cond \<longleftrightarrow> ?Set_Cond"
+  proof 
+    assume ?Graph_Cond
+
+    obtain p where p_unique:
+      "bipartite_graph.is_perfect_matching n E p"
+      "bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) p = bipartite_graph.min_weight_val n (\<lambda>u v. w_func(u,v)) E"
+      "\<forall>q. bipartite_graph.is_perfect_matching n E q \<and> 
+           bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) q = bipartite_graph.min_weight_val n (\<lambda>u v. w_func(u,v)) E \<longrightarrow> q = p"
+      using `?Graph_Cond` unfolding bipartite_graph.unique_min_weight_condition_def
+      by auto
+
+    let ?S_p = "matching_to_set n p"
+
+    have is_min: "minimizer ?F w_func ?S_p"
+      unfolding minimizer_def perfect_matching_family_def
+    proof (intro conjI)
+      show "?S_p \<in> {matching_to_set n p |p. p permutes {0..<n} \<and> (\<forall>i<n. (i, p i) \<in> E)}"
+        using p_unique(1) bipartite_graph.is_perfect_matching_def by auto
+
+    next
+      show "\<forall>S \<in> {matching_to_set n p |p. p permutes {0..<n} \<and> (\<forall>i<n. (i, p i) \<in> E)}.
+            wt w_func ?S_p \<le> wt w_func S"
+      proof (intro ballI)
+        fix S assume "S \<in> {matching_to_set n p |p. p permutes {0..<n} \<and> (\<forall>i<n. (i, p i) \<in> E)}"
+        then obtain q where q_def: "S = matching_to_set n q" "bipartite_graph.is_perfect_matching n E q"
+          unfolding bipartite_graph.is_perfect_matching_def by auto
+
+        have "wt w_func ?S_p = bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) p"
+          using bipartite_graph.is_perfect_matching_def p_unique(1)
+            weight_equivalence by presburger
+        also have "... \<le> bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) q"
+          by (simp add: bipartite_graph.minimum_weight p_unique(2)
+              q_def(2))
+        also have "... = wt w_func S"
+          using is_perfect_matching_def q_def(1,2) weight_equivalence
+          by auto
+        finally show "wt w_func ?S_p \<le> wt w_func S" .
+        qed
+      qed
+      have "\<forall>S \<in> ?F. minimizer ?F w_func S \<longrightarrow> S = ?S_p"
+      proof (intro ballI impI)
+        fix S assume "S \<in> ?F" "minimizer ?F w_func S"
+        then obtain q where q_def: "S = matching_to_set n q" "bipartite_graph.is_perfect_matching n E q"
+          unfolding perfect_matching_family_def bipartite_graph.is_perfect_matching_def by auto
+
+        have "wt w_func S = wt w_func ?S_p"
+          using is_min
+          using \<open>minimizer (perfect_matching_family n E) w_func S\<close>
+            minimizers_same_weight by blast 
+
+        then have "bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) q = bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) p"
+          by (metis is_perfect_matching_def p_unique(1) q_def(1,2)
+              weight_equivalence)
+
+        then have "p = q"
+          using p_unique(2,3) q_def(2) by auto
+
+        then show "S = ?S_p" using q_def(1) by simp
+      qed
+    show ?Set_Cond
+      unfolding has_unique_minimizer_def
+      using
+        \<open>\<forall>S\<in>perfect_matching_family n E. minimizer (perfect_matching_family n E) w_func S \<longrightarrow> S = matching_to_set n p\<close>
+        is_min minimizer_def by blast 
+  next
+    assume ?Set_Cond
+
+    obtain S where S_unique: "minimizer ?F w_func S" "\<forall>S' \<in> ?F. minimizer ?F w_func S' \<longrightarrow> S' = S"
+      using `?Set_Cond` has_unique_minimizer_def
+      by metis
+
+    obtain p where p_def: "S = matching_to_set n p" "bipartite_graph.is_perfect_matching n E p"
+      using S_unique(1) minimizer_def perfect_matching_family_def bipartite_graph.is_perfect_matching_def
+      by (smt (verit, del_insts) mem_Collect_eq)
+
+    show ?Graph_Cond
+      unfolding bipartite_graph.unique_min_weight_condition_def
+    proof (intro ex1I conjI)
+      show "bipartite_graph.is_perfect_matching n E p" using p_def(2) .
+
+      show "bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) p = bipartite_graph.min_weight_val n (\<lambda>u v. w_func(u,v)) E"
+      proof -
+        let ?Weights = "{bipartite_graph.matching_weight n (\<lambda>u v. w_func (u, v)) q |q. bipartite_graph.is_perfect_matching n E q}"
+
+        have "finite ?Weights"
+          using bipartite_graph.finite_perfect_matchings by auto
+
+        have p_in_weights: "bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) p \<in> ?Weights"
+          using p_def(2) by auto
+
+        have p_min: "\<forall>y \<in> ?Weights. bipartite_graph.matching_weight n (\<lambda>u v. w_func(u, v)) p \<le> y"
+        proof
+          fix y assume "y \<in> ?Weights"
+          then obtain q where q_info: "y = bipartite_graph.matching_weight n (\<lambda>u v. w_func(u, v)) q" " bipartite_graph.is_perfect_matching n E q"
+            by auto
+
+          let ?S_q = "matching_to_set n q"
+
+          have Sq_in_family: "?S_q \<in> perfect_matching_family n E"
+            using bipartite_graph.is_perfect_matching_def
+              perfect_matching_family_def q_info(2) by auto
+
+          have "wt w_func S \<le> wt w_func ?S_q"
+            using S_unique(1) Sq_in_family minimizer_def by auto
+        
+          then show "bipartite_graph.matching_weight n (\<lambda>u v. w_func (u,v)) p \<le> y"
+            by (metis bipartite_graph.is_perfect_matching_def
+                bipartite_graph.weight_equivalence p_def(1,2) q_info(1,2))
+        qed
+        have "bipartite_graph.matching_weight n (\<lambda>u v. w_func (u,v)) p = Min ?Weights"
+          by (metis (no_types, lifting) Min_eqI
+              \<open>finite {bipartite_graph.matching_weight n (\<lambda>u v. w_func (u, v)) q |q. is_perfect_matching q}\<close>
+              p_in_weights p_min)
+        then show ?thesis
+            using
+              \<open>bipartite_graph.matching_weight n (\<lambda>u v. w_func (u, v)) p = Min {bipartite_graph.matching_weight n (\<lambda>u v. w_func (u, v)) q |q. is_perfect_matching q}\<close>
+              bipartite_graph.min_weight_val_def by auto 
+        qed
+
+        fix q assume q_asm: "bipartite_graph.is_perfect_matching n E q \<and> 
+                           bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) q = bipartite_graph.min_weight_val n (\<lambda>u v. w_func(u,v)) E"
+
+        let ?S_q = "matching_to_set n q"
+
+        have "wt w_func ?S_q = wt w_func S"
+        proof -
+          have Sq_eq_q: "wt w_func ?S_q = bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) q"
+            using bipartite_graph.is_perfect_matching_def q_asm
+              weight_equivalence by blast
+          also have "... = bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) p"
+            using
+              \<open>bipartite_graph.matching_weight n (\<lambda>u v. w_func (u, v)) p = bipartite_graph.min_weight_val n (\<lambda>u v. w_func (u, v)) E\<close>
+              q_asm by force
+          also have "... = wt w_func S"
+            by (metis is_perfect_matching_def p_def(1,2)
+                weight_equivalence)
+          finally show ?thesis .
+        qed
+
+        have "?S_q = S"
+        proof -
+          have Sq_in_F: "?S_q \<in> ?F"
+            using q_asm unfolding perfect_matching_family_def bipartite_graph.is_perfect_matching_def by auto
+
+          have "minimizer ?F w_func ?S_q"
+            by (metis S_unique(1) Sq_in_F
+                \<open>wt w_func (matching_to_set n q) = wt w_func S\<close>
+                minimizer_def)
+
+          show ?thesis
+            by (simp add: S_unique(2) Sq_in_F
+                \<open>minimizer (perfect_matching_family n E) w_func (matching_to_set n q)\<close>)
+        qed
+
+        show "q = p"
+          using \<open>matching_to_set n q = S\<close> is_perfect_matching_def
+            matching_to_set_inj p_def(1,2) q_asm by presburger
+      qed
+    qed
+qed
+
+
+
 lemma isolation_lemma_for_perfect_matching:
   fixes N :: nat
   assumes "N \<ge> 1"
   assumes "\<exists>p. is_perfect_matching p"
+  assumes "E \<subseteq> {0..<n} \<times> {0..<n}"
 
 shows "measure_pmf.prob (w_pmf N E)
       {w. bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w(u,v)) E}
       \<ge> 1 - (real (card E)/ real N)"
+proof -
+  let ?U = E
+  let ?F = "perfect_matching_family n E"
 
+  have condition_eq: 
+    "{w. bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w(u,v)) E} = {w. has_unique_minimizer ?F w}"
+    by (simp add: pm_iso_equivalence)
 
+  have "finite ?U"
+  proof -
+    have "finite ({0..<n} \<times> {0..<n})" by simp
+    then show "finite E"
+      using assms(3) finite_subset by blast
+  qed
+
+  have "?F \<subseteq> Pow ?U"
+    unfolding perfect_matching_family_def matching_to_set_def bipartite_graph.is_perfect_matching_def
+    by blast
+
+  have "?F \<noteq> {}"
+  proof -
+    obtain p where "bipartite_graph.is_perfect_matching n E p"
+      using assms(2) by auto
+    then have "matching_to_set n p \<in> ?F"
+      unfolding perfect_matching_family_def
+      using is_perfect_matching_def by auto
+    then show ?thesis by auto
+  qed
+
+  have prob_bound: "measure_pmf.prob (w_pmf N ?U){w. has_unique_minimizer ?F w} \<ge> 1 - real(card ?U)/real N"
+    using isolation_lemma_main[of ?U ?F N]
+    using `finite ?U` `?F \<subseteq> Pow ?U` `?F \<noteq> {}` `N \<ge> 1` 
+    by simp
+
+  show ?thesis
+    by (simp add: condition_eq prob_bound)
 qed
-
 end
-
 end
