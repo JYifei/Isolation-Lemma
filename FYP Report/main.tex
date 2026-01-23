@@ -1,0 +1,193 @@
+\documentclass[pdftex, 12pt, a4paper]{report}
+
+% =============================================================
+% 1. PACKAGES & GEOMETRY
+% =============================================================
+\usepackage{mathptmx} % Times New Roman font
+\usepackage[top=3cm, bottom=3cm, left=3.5cm, right=3cm]{geometry}
+\usepackage[hidelinks]{hyperref}
+\usepackage[pdftex]{graphicx}
+\usepackage{booktabs}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{float}
+\usepackage{multirow}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[shortlabels]{enumitem}
+
+% =============================================================
+% 2. ISABELLE CODE HIGHLIGHTING (Added for your project)
+% =============================================================
+\usepackage{listings}
+\usepackage{xcolor}
+
+
+\lstdefinelanguage{Isabelle}{
+    keywords={theory, imports, begin, end, type_synonym, definition, lemma, theorem, proof, assume, show, have, thus, qed, unfolding, apply, by, obtain, where, fix, for},
+    keywordstyle=\color{blue}\bfseries,
+    ndkeywords={nat, int, set, list, bool, pmf},
+    ndkeywordstyle=\color{black}\bfseries,
+    identifierstyle=\color{black},
+    sensitive=true,
+    morecomment=[s]{(*}{*)},
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{red}\ttfamily,
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    frameround=tttt,
+    backgroundcolor=\color{gray!5},
+    captionpos=b,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    literate=
+        {::}{{::}}2              
+        {\\in}{{$\in$}}1         
+        {~:}{{$\notin$}}2        
+        {~=}{{$\neq$}}2          
+        {<=}{{$\le$}}1
+        {>=}{{$\ge$}}1
+        {=>}{{$\Rightarrow$}}2
+        {ALL}{{$\forall$}}1
+        {EX}{{$\exists$}}1
+        {EX!}{{$\exists!$}}2
+        {&}{{$\land$}}1
+        {|}{{$\lor$}}1
+        {-->}{{$\longrightarrow$}}2
+}
+% =============================================================
+% 3. BIBLIOGRAPHY SETTINGS
+% =============================================================
+% Explicitly using biber backend to avoid errors
+\usepackage[backend=biber, style=ieee, sorting=none]{biblatex}
+\addbibresource{bib.bib}
+
+% Custom citation formats to match NTU/IEEE guidelines
+\DeclareFieldFormat{issn}{}
+\DeclareFieldFormat{url}{\iffieldundef{doi}{\url{#1}}{}}
+\DeclareFieldFormat[misc]{title}{\mkbibquote{#1}}
+\DeclareFieldFormat[online]{note}{\space{#1}}
+\DeclareFieldFormat[online]{url}{\space\url{#1}}
+
+\AtBeginBibliography{\normalsize\urlstyle{same}}
+
+% =============================================================
+% 4. FORMATTING & LAYOUT (Titles, TOC, Headers)
+% =============================================================
+\usepackage{titlesec}
+\titleformat{\chapter}{\normalfont\scshape\LARGE\centering}{\thechapter}{1em}{}
+\titlespacing*{\chapter}{0pt}{-60pt}{1em}
+\titleformat{name=\chapter,numberless}[display]{\normalfont\scshape\LARGE\centering}{}{0pt}{}
+\titleformat{\section}{\normalfont\scshape\bfseries\Large}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\bfseries\scshape\normalsize}{\thesubsection}{1em}{}
+
+\usepackage{tocloft}
+\renewcommand{\cftchapfont}{\normalfont}
+\renewcommand{\cftsecfont}{\normalfont}
+\renewcommand{\cftloftitlefont}{\hfill\normalfont\scshape\LARGE}
+\renewcommand{\cftafterloftitle}{\hfill}
+\renewcommand{\cftlottitlefont}{\hfill\normalfont\scshape\LARGE}
+\renewcommand{\cftafterlottitle}{\hfill}
+\setlength{\cftbeforetoctitleskip}{-20pt}
+\setlength{\cftbeforeloftitleskip}{-20pt}
+\setlength{\cftaftertoctitleskip}{10pt}
+\setlength{\cftbeforechapskip}{0pt}
+\renewcommand{\cftdotsep}{1}
+\renewcommand{\cftchapdotsep}{\cftdotsep}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[R]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyfoot[R]{\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+  \renewcommand{\footrulewidth}{0pt}
+}
+
+% Strict formatting settings (Prevent hyphenation & breaks)
+\setstretch{1.5}
+\sloppy
+\tolerance=1
+\emergencystretch=\maxdimen
+\hyphenpenalty=10000
+\hbadness=10000
+
+% =============================================================
+% 5. DOCUMENT METADATA
+% =============================================================
+% Adjusted title and code (Removed brackets [])
+\title{\uppercase{Formalizing the Isolation Lemma in Isabelle/HOL}}
+\newcommand\fypcode{CCDS25-0096} 
+\author{Jiang Yifei}
+\date{2026}
+\newcommand\degree{Bachelor of Computing in Computer Science}
+
+% =============================================================
+% 6. MAIN DOCUMENT CONTENT
+% =============================================================
+\begin{document}
+
+% --- Front Matter ---
+% \input{cover.tex} % Uncomment if cover page is needed
+\input{title.tex}
+
+\pagenumbering{roman}
+\setcounter{page}{2}
+
+\addcontentsline{toc}{chapter}{Abstract}
+\input{abstract.tex}
+
+\pagebreak
+\addcontentsline{toc}{chapter}{Acknowledgements}
+\input{acknowledgements.tex}
+
+% --- Tables of Content/Figures ---
+\renewcommand{\contentsname}{\normalfont\scshape\LARGE Table of Contents}
+\renewcommand{\listfigurename}{\normalfont\scshape\LARGE List of Figures}
+
+\pagebreak
+\tableofcontents
+
+\pagebreak
+\addcontentsline{toc}{chapter}{List of Figures}
+\listoffigures
+% Note: List of Tables is omitted as this is a formalization project.
+
+\cleardoublepage
+\pagenumbering{arabic}
+\renewcommand{\figurename}{Fig.}
+
+% --- Chapters ---
+\input{Chp1_intro.tex}
+\input{Chp2_preliminaries.tex}
+\input{Chp3_modeling.tex}
+\input{Chp4_proof.tex}
+\input{Chp5_matching.tex}
+\input{Chp6_conclusion.tex}
+
+% --- References ---
+\begingroup
+% Reset formatting locally for bibliography to look better
+\tolerance=2000 
+\emergencystretch=3em 
+\hyphenpenalty=50 
+\hbadness=1000 
+
+\addcontentsline{toc}{chapter}{References}
+{\fontfamily{ptm}\selectfont 
+\normalsize 
+\begin{spacing}{1.5}
+\printbibliography[title={References}]
+\end{spacing}
+}
+\endgroup
+
+\end{document}
