@@ -1,33 +1,31 @@
-\chapter{Formalizing the Isolation Lemma}
+\chapter{Formal Modeling of the Isolation Lemma}
 \label{chp:modeling}
 
-The formalization of any randomized algorithm requires a careful translation of intuitive mathematical concepts into rigorous logical definitions.
-In this chapter, we will establish the foundational modeling framework for the Isolation Lemma in Isabelle/HOL.
+This chapter marks the first step in the formalization process by translating the core components of the Isolation Lemma into rigorous definitions with the Isabelle/HOL theorem proving environment.
+Building on the informal statement of the lemma provided in Chapter~\ref{chp:prelims}, our objective here is to move from intuitive, pen-and-paper reasoning to a precise and structured formal model.
+This transition corresponds to the intermediate stage in the formalization pipline:
+from Pen-and-Paper Proofs (PP) to a Formal Proof (FP) representation that is is machine-readable and logically well-formed, but not yet fully proved.
 
 We proceed by constructing the essential components of the lemma layer by layer.
-
 First, we define the underlying universe of the elements and the weight functions, and explain the rationale of choosing natural numbers for weight representation.
-
-Second, we formalize the concept of the "minimizer" and the condition of its uniqueness within a family of sets.
-
-Finally, we construct the probability space using HOL-Probability Library, ensuring that the weights are distributed uniformly and independently.
+Second, we formalize the concept of the minimizer and the condition of its uniqueness within a family of sets.
+Finally, we construct the product probability space using HOL-Probability Library, ensuring that the weights are distributed uniformly and independently.
 
 These definitions act as the foundation upon with the correctness proof in Chapter \ref{chp:proof} is built.
 Special attention is given to the design decisions that facilitate proof automation.
-In particular, we carefully handel finiteness assumptions and the construction of measure spaces, as these aspects are crucial for enabling automated reasoning in Isabelle/HOL.
+In particular, we carefully handle finiteness assumptions and the construction of measure spaces, as these aspects are crucial for enabling automated reasoning in Isabelle/HOL.
 
 \paragraph{Standing assumptions.}
 Throughout this chapter, we fix a universe $U$ and a non-empty family of sets $F \subseteq \mathcal{P}(U)$, and assume that $U$ is finite.
 For the randomized construction, we fix an integer $N \ge 1$ and sample weights for all $x \in U$ independently and uniformly from $\{1, \dots, N\}$.
 
-These definitions act as the foundation upon which the correctness proof in Chapter ~\ref{chp:proof} is built.
-Special attention is given to design decisions that facilitate proof automation, especially regarding the handling of finite sets and measure spaces.
-
-
 \section{Modeling Weights and Universe}
 \label{sec:modeling_weights}
 
-In the standard mathematical formulation of the Isolation Lemma, we consider a universe of elements U.
+Informal descriptions of randomized constructions often begin with intuitive assumptions about sets and weights, relying on natural notation without explicitly encoding their constraints.
+In the context of formal verification, however, these assumptions must be carefully reconstructed to support mechanized reasoning.
+
+In the standard mathematical formulation of the Isolation Lemma, we consider a universe of elements $U$.
 A weight function, $w$, assigns a numerical value to each element in $U$. 
 Typically, these weights are integers chosen uniformly and randomly from a range $\{1, \dots, N\}$.
 The weight of a subset $S \subseteq U$ is then defined as the sum of the weights of its constituent elements:
@@ -35,9 +33,9 @@ The weight of a subset $S \subseteq U$ is then defined as the sum of the weights
     w(S) = \sum_{x \in S} w(x)
 \end{equation}
 
-To formalize this in Isabelle/HOL, we avoid defining an explicit "Universe" type.
+To formalize this in Isabelle/HOL, we avoid defining an explicit ``Universe'' type.
 Instead, we represent the universe implicitly via type variables $'a$.
-More precisely, the universe is modeled as an explicit set $U :: 'a~set$.
+More precisely, the universe is modeled as an explicit set $U :: 'a~\texttt{set}$.
 The type variable $'a$ serves only as a carrier type, while all semantic statements about weights are restricted to elements $x \in U$.
 Although weight functions are total by definition in Isabelle, values outside the universe do not play any role in the proof.
 We introduce a type synonym to model the weight assignment.
@@ -60,6 +58,10 @@ The choice of a total function is a technical requirement of Isabelle/HOL, where
 Semantically, all arguments and constructions in the sequel will only depend on the values of $w$ restricted to the universe $U$.
 This separation between the carrier type and the explicit universe avoids treading the weight function as a partial function, which is not natively supported in Isabelle/HOL.
 
+This modeling step illustrates a typical transition from pen-and-paper reasoning to formal verification.
+While informal proofs treat the definition of weights and subset sums as self-evident, formalization forces us to separate type-level carriers from explicitly quantified finite sets, and to express totality and domain restrictions precisely.
+These distinctions are not only technical, but crucial in enabling mechanized proof construction within a system like Isabelle/HOL.
+
 \subsection*{Design Decision: Natural Numbers vs. Integers}
 A critical modeling decision was the choice of the codomain for the weight function.
 While the original lemma is often stated using integers, we selected Isabelle's natural number type (\texttt{nat}).
@@ -68,7 +70,7 @@ This decision is motivated by two factors:
 \begin{itemize}
     \item \textbf{Non-negativity:} In the context of the Isolation Lemma, weight are strictly positive (from $\{1, \dots, N\}$).
         Using \textbf{nat} naturally enforces this constraint without requiring additional invariants to check for negative values.
-    \item \textbf{Inductive Reasoning:} The \texttt{nat} type in Isabelle supports powerful induction heuristics which facilitate the automation of arithmetic proofs.
+    \item \textbf{Inductive Reasoning:} The \texttt{nat} type in Isabelle is powerful in induction heuristics which facilitate the automation of arithmetic proofs.
 \end{itemize}
 
 \subsection*{Handling Finiteness}
@@ -86,14 +88,16 @@ Accordingly, all lemmas involving weight computations in this development explic
 \section{Defining Minimizers and Uniqueness}
 \label{sec:defining_minimizers}
 
-We define "minimizer" as a central concept in the Isolation Lemma.
-Intuitively, a minimizer is a set in the family $\mathcal{F}$ that achieves the minimum total weight.
+A key conceptual step in understanding the Isolation Lemma is indentifying what it means for a set to be a "minimizer".
+Pen-and-paper arguments often describes this idea informally -- noting that some set achieves the lowest weight -- but leave the structural details implicit.
+To move toward a formal proof, we must refine this informal notion into a logically precise predicate.
+
 Formally, for a family of subsets $\mathcal{F}$ and a weight function $w$, a set $A$ is a minimizer if:
 \begin{equation}
     A \in \mathcal{F} \quad \text{and} \quad \forall B \in \mathcal{F}, \; w(A) \le w(B)
 \end{equation}
 
-We formalize this concept defining the predicate \texttt{minimizer F w A}.
+To encode this concept formally, we define a predicate \texttt{minimizer F w A} that captures both membership in $\mathcal{F}$ and optimality under the weight function.
 This predicate holds true if and only if the set $A$ belongs to the family $F$ and its weight is less than or equal to the weight of any other set $B$ in $F$
 
 \begin{lstlisting}[language=Isabelle, caption={Formal Definition of a Minimizer and Uniqueness}, label={lst:minimizer}]
@@ -108,31 +112,34 @@ definition has_unique_minimizer :: "'a set set => 'a weight => bool" where
   (* then A is the unique minimizer of F under weight w *)
 \end{lstlisting}
 
-As illustrated in Listing \ref{lst:minimizer}, the definition captures the standard mathematical intuition directly.
+Listing~\ref{lst:minimizer} shows how the intuitive minimizer definition is directly translated into a formal predicate suitable for mechanized reasoning.
 It is important to note that this definition is purely predicate-based.
 The predicate \texttt{minimizer F w A} does not, by itself, assert the existence or uniqueness of such a set.
 These properties must be established separately under additional assumptions on the family $F$ and the weight function $w$.
 In the setting of formal proof, such distinctions are neccessary to avoid implicitly assuming the existence or uniqueness of minimizers.
 
-The core assertion of the Isolation Lemma concerns the \textbf{uniqueness} of this minimizer.
-We define a predicate \texttt{has\_unique\_minimizer} to capture this property formally.
+The Isolation Lemma goes beyond existence -- its core claim concerns the \textbf{uniqueness} of the minimizer under random weights.
+To formalize this probabilistic uniqueness claim, we define a predicate \texttt{has\_unique\_minimizer}.
 Here, we utilize Isabelle's unique existential quantifier $\exists!$.
 The expression $\exists! A. P(A)$ asserts that there exists \textit{exactly one} element $A$ such that the predicate $P(A)$ is true.
+This bridges the informal idea of uniqueness with a machine-verifiable logical form.
 
 Thus, \texttt{has\_unique\_minimizer F w} states that there is exactly one set $A$ in the family $F$ that satisfies the minimizer condition.
 This concise definition serves as the target statement for our main probability bound proof in the subsequent chapters.
 
 \subsection*{A Useful Reformulation of Non-Uniqueness}
 
-In the proof of the Isolation Lemma, it is often more convenient to reason about non-uniqueness by working with explicit witnesses.
-Accordingly, we will make use of the standard logical equivalence that the minimizer is not unique if and only if there exist two distinct sets $A \neq B$ in $\mathcal{F}$ that both satisfy the minimizer predicate.
-This reformulation allows us to fix such a pair of minimizers and derive concrete structural properties in the subsequent proof.
+In pen-and-paper proofs, non-uniqueness is often described informally, but in the formal setting, it is more convenient to reason with explicit witnesses.
+We therefore reformulate non-uniqueness using a standard logical equivalence: there is no unique minimizer if and only if two distinct sets $A \ne B$ in $\mathcal{F}$ both satisfy the \texttt{minimizer} predicate.
+This reformulation enables case-based reasoning in the formal proof, where fixed witnesses simplify the structural analysis of minimizers.
 
 \section{The Alpha Construction}
 \label{sec:alpha_construction}
 
-The crux of the Isolation Lemma relies on a specific value associated with each element $x$, denoted as $\alpha(x)$.
-This quantity was introduced by Mulmuley et al.\ to isolate the dependency of the total weight on the individual weight $w(x)$.
+The crux of the Isolation Lemma relies on a specific value associated with each element $x$, commonly denoted as $\alpha(x)$.
+Originally introduced by Mulmuley et al. this quantity provides an intuitive threshold that governs whether $x$ contributes to a minimum-weight set.
+Form an informal perspective, $\alpha(x)$ reflect how sensitive the total weight is to the choice of $w(x)$.
+Our goal in this section is to move from this intuition toward a formal expression that supports explicit reasoning in the proof assistant.
 
 Mathematically, $\alpha(x)$ is defined as the difference between two minimum values:
 \begin{equation}
@@ -147,6 +154,7 @@ Mathematically, $\alpha(x)$ is defined as the difference between two minimum val
 Intuitively, this measures the "gap" or threshold for $w(x)$.
 The first term represents the minimum weight achievable without using $x$.
 The second term represents the minimum "residual" weight required to complete a set that must contain $x$.
+Taken together, these two terms describe the boundary condition under which $x$ determines the overall minimizer.
 
 \subsection*{Formal Definition}
 In Isabelle/HOL, we formalize this using the \texttt{LEAST} operator.
@@ -160,7 +168,9 @@ definition alpha :: "('a => nat) => 'a set set => 'a => nat" where
 \end{lstlisting}
 
 \subsection*{Well-Definedness and Intended Use}
-The use of the \texttt{LEAST} operator requires the existence of witnesses for the corresponding predicates.
+In the transition from intuitive definitions to formal ones, a key difficulty is ensuring that expressions like $\alpha(x)$ are well-defined.
+The use of the \texttt{LEAST} operator in Isabelle/HOL requires explicit witnesses for the corresponding minimum conditions.
+This is in contrast with pen-and-paper reasoning, where such existence is often assumed without justification.
 In our development, such existence properties are not assumed implicitly, but are discharged later as explicit proof obligations, under suitable conditions on the family $\mathcal{F}$, in particular the existence of minimizers.
 
 At the modeling stage, $\alpha(x)$ is treated as an abstract quantity defined in terms of minimal weights.
@@ -172,34 +182,36 @@ This separation reflects a standard discipline in formal verification, where def
 \section{Probability Space Construction}
 \label{sec:prob_space}
 
-The final component of our modeling framework is the construction of the probability space.
+We now formalize the last component required to move from intuitive probabilistic assumptions (pp) to a machine-verifiable framework (fp): the construction of the probability space.
 Mathematically, the Isolation Lemma assumes that the weight $w(x)$ for each element $x \in U$ is chosen independently and uniformly at random from the set $\{1,\dots,N\}$.
 We assume $N \ge 1$, ensuring that the set $\{1, \dots, N\}$ is non-empty and the uniform distribution is well-defined.
 
-\subsection*{Modeling Challenge: Implicit vs. Explicit Probability}
+\subsection*{Modeling: Implicit and Explicit Probability}
+This stage illustrates a particularly significant shift from informal reasoning to explicit construction.
 In standard pen-and-paper proofs, probability is often treated implicitly. We simply state "Let $w$ be a random weight function" and proceed to calculate probabilities of events.
 However, in a formal proof assistant like Isabelle/HOL, there is no ambiguity allowed.
 We cannot merely assume randomness; we must explicitly construct the underlying probability distribution (as a PMF object).
 
 This introduces a gap between intuition and formalization.
 We must define a concrete probability mass function (PMF) over the function space $U \to \{1 \dots. N\}$.
-To bridge this gap, we leverage the \texttt{HOL-Probability} library, which formalizes discrete distributions using measure theory.
-This construction makes the probability assumptions of the Isolation Lemma explicit objects of reasoning, rather than informal background conditions.
+To bridge this gap, we make us of the \texttt{HOL-Probability} library, which formalizes discrete distributions using measure theory.
+This library makes the probability assumptions of the Isolation Lemma explicit objects of reasoning, rather than implicit conditions.
 
 
 \subsection*{Formalizing the Product Space}
-Since the choice for each element $x \in U$ is independent, the joint probability distribution over the universe is the product of the individual marginal distributions.
-We construct this in two steps:
+To transform the intuitive statement "weights are chosen independently and uniformly" into a formal object, we construct the joint as a product of marginal distributions:
 
 \begin{enumerate}
   \item \textbf{Uniform Component:} A uniform distribution over the finite set $\{1, \dots, N\}$.
   \item \textbf{Product Construction:} A product PMF over the finite domain $U$.
 \end{enumerate}
 
-This decomposition mirrors the mathematical assumption of independent sampling, but is made explicit here to support formal reasoning about marginals and conditional probabilities.
+In pen-and-paper reasoning, such product distributions are usually left implicit.
+In our formal setting, both the uniform marginals and their combination must be constructed explicitly.
 
-For the uniform component, we use \texttt{pmf\_of\_set} to represent the uniform distribution over the finite set $\{1, \dots, N\}$.
-To combine these marginal distributions, we apply the \texttt{Pi\_pmf} operator, which constructs a product PMF over the domain $U$.
+The uniform marginal distribution on $\{1, \dots, N\}$ is implemented using \texttt{pmf\_of\_set}, which constructs a uniform PMF over any finite non-empty set.
+
+These marginals are then combined using the \texttt{Pi\_pmf} operator, which creates a product distribution over the domain $U$, with independent sampling at each point.
 
 \begin{lstlisting}[language=Isabelle, caption={Construction of the Weight Probability Space}, label={lst:prob_space}]
 definition w_pmf :: "'a set => nat => 'a weight pmf" where
@@ -217,3 +229,12 @@ Since functions in Isabelle/HOL are total, they must return a value even for inp
 While this implementation detail is necessary to satisfy Isabelle's type system, it does not affect the mathematical validity of the lemma, as our reasoning is strictly confined to the elements within $U$.
 
 By modeling the randomness as a PMF object, probabilistic events become first-class objects in the logic, allowing standard measure theoretic reasnong, such as union bounds, to be carried out within Isabelle/HOL.
+
+\paragraph{From Modeling to Proof.}
+
+With the modeling phase complete, we now have a precise formal infrastructure: weight assignments over finite universes, a definition of minimizers and uniqueness, and an explicitly constructed product probability space.
+
+This framework resolves the ambiguities present in informal (pen-and-paper) reasoning, where independence, randomness, and uniqueness are often stated but not justified.
+
+In the next chapter, we transit from formal modeling to fully formal verification.
+Each proof step will rely on the definitions developed here and will make all logical dependencies explicit, thus completing the transition from intuitive understanding to machine-checked formal proof.

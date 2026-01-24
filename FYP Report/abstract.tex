@@ -1,3 +1,9 @@
 \chapter*{Abstract}
-% \addcontentsline{toc}{chapter}{Abstract}
-This template was made and last updated end 2025. It follows NTU's conventional FYP guidelines and IEEE standards to the best of my knowledge. It should be noted that FYP guidelines DO NOT follow the IEEE standard that strictly in terms of citations. Additionally, this was written with Computer Engineering projects in mind (I am CE), so it conforms to the IEEE standard more closely.
+
+Randomized algorithms are a cornerstone of modern theoretical computer science, yet their proofs often rely on informal probabilistic intuition that obscures critical assumptions about independence and measurability.
+This report presents a formal verification of the \textbf{Isolation Lemma} -- a fundamental principle ensuring the uniqueness of minimum-weight structures -- within the \textbf{Isabelle/HOL} interactive theorem prover.
+
+We explicitly construct the underlying product probability space for random weight assignments and formalize the conditions for the existence and uniqueness of minimizers over finite sets.
+By rigorously defining the auxiliary value $\alpha(x)$ and proving its independence from individual weights $w(x)$, we formally derive the upper bound on the failure probability.
+Furthermore, this formalization serves as the theoretical foundation for verifying a randomized parallel algorithm for the \textbf{Perfect Matching problem}.
+The results demonstrate how pseudo-formal probabilistic arguments can be transformed into fully machine-checked proofs, clarifying hidden dependencies in algorithmic reasoning.

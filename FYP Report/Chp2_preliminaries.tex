@@ -1,13 +1,90 @@
 \chapter{Preliminaries}
 \label{chp:prelims}
 
-% TODO: Intro to the chapter
 
 \section{Interactive Theorem Proving}
-% TODO: Concept of ITP
+
 
 \section{Isabelle/HOL System}
-% TODO: Brief intro to Isabelle syntax and logic
 
 \section{The Isolation Lemma}
-% TODO: Mathematical definition (Mulmuley et al.)
+The Isolation Lemma, originally introduced by Mulmuley, Vazirani, and Vazirani~\cite{mulmuley1987matching}, is a probabilistic principle used to ensure that, with high probability, a unique solution exists among a family of sets.
+It has found widespread applications in randomized algorithms, particularly in problems involving combinatorial search, matching, and derandomization.
+
+\vspace{0.5cm}
+\noindent
+\textbf{Informal Statement.}
+Let $U$ be a finite set (called the \emph{universe}), and let $\mathcal{F} \subseteq \mathcal{P}(U)$ be a non-empty family of subsets of $U$.
+Each element $x \in U$ is assigned a weight $w(x)$ independently and uniformly at random from $\{1, 2, \dots, N\}$ for some integer $N \ge 1$.
+The total weight of a set $S \in \mathcal{F}$ is defined as"
+\[
+    w(S) = \sum_{x \in S} w(x)    
+\]
+The Isolation Lemma states that, with high probability, there is a unique set in $\mathcal{F}$ that minimizes this weight function.
+
+\vspace{0.5cm}
+\noindent
+\textbf{Theorem (Isolation Lemma)~\cite{mulmuley1987matching}:}
+\emph{
+    Let $U$ be a finite set with $|U| = n$, and let $\mathcal{F} \subseteq \mathcal{P}(U)$ be a non-empty family of subsets.
+    Suppose that each $x \in U$ is assigned an integer weight $w(x)$ drawn independently and uniformly at random from $\{1, 2, \dots, N\}$.
+    Then the probability that there exists a unique set $A \in \mathcal{F}$ that minimizers $w(S)$ is at least $1 - \frac{n}{N}$.
+}
+\[
+    \Pr[\exists! A \in \mathcal{F} \text{ minimizing } w(A)] \ge 1 - \frac{n}{N} 
+\]
+
+\vspace{0.5cm}
+\noindent
+\textbf{Proof Idea.}
+The proof relies on analyzing the probability that \emph{two or more} sets achieving the same minimum weight.
+The key technique is to consider the structure of conflicting pairs and show that their probability of collision is small.
+By summing over all such pairs and bounding their contribution, one obtains the upperbound $\frac{n}{N}$ on the failure probability.
+
+\vspace{0.5cm}
+\noindent
+\textbf{Proof (Joel Spencer~\cite{spencer1995probabilistic}).}
+Let $U = \{e_1, e_2, \dots, e_n\}$ be a finite set of $n$ elements, and let $\mathcal{F} \subseteq \mathcal{P}(U)$ be a non-empty family of subset of $U$.
+Suppose each element $x \in U$ is assigned a random weight $w(x)$ uniformly from $\{1, 2, \dots, N\}$.
+
+For any $x \in U$, define:
+\[
+\alpha(x) = \min_{\substack{S \in \mathcal{F} \\ x \notin S}} w(S)- \min_{\substack{S \in \mathcal{F} \\ x \in S}} w(S \setminus \{x\})
+\]
+This value $\alpha(x)$ depends only on the weights of elements other than $x$ itself, since $x$ is excluded from all weight sums in the definition.
+Because $w(x)$ is independently and uniformly chosen from $\{1, 2, \dots, N\}$, the probability that $w(x) = \alpha(x)$ is at most $1/N$.
+
+Now, suppose there are two distinct sets $A, B \in \mathcal{F}$ such that both minimize the total weight $w(S) = \sum_{x \in S} w(x)$.
+Let $x \in A \triangle B$ (i.e., an element in the symmetric difference). Without loss of generality, suppose $x \in A \setminus B$.
+Then we have:
+\[
+\begin{aligned}
+\alpha(x) &= \min_{\substack{S \in \mathcal{F} \\ x \notin S}} w(S)- \min_{\substack{S \in \mathcal{F} \\ x \in S}} w(S \setminus \{x\})
+          &= w(B) - \left( w(A) - w(x) \right)
+          &= w(x)
+\end{aligned}
+\]
+So for this $x$, $w(x) = \alpha(x)$. The chance that this happens for any particular $x$ is at most $1/N$, and since there are at most $n$ such $x$, the total probability that some $x$ satisfies this is at most $n/N$.
+
+Thus, with probability at least $1 - \frac{n}{N}$, no such $x$ exists, and the minimum-weight set in $\mathcal{F}$ is unique.
+
+\vspace{0.5cm}
+\noindent
+\textbf{Remarks.}
+\begin{itemize}
+    \item The bound $1 - \frac{n}{N}$ improves as $N$ increases. In particular, for $N > 2n$, the probability of uniqueness exceeds $0.5$.
+    \item The lemma is non-constructive: it guarantees uniqueness probabilistically, but not which set is unique.
+    \item It is widely used in randomized parallel algorithms and in complexity theory, e.g., in the isolation of perfect matchings.
+\end{itemize}
+
+\vspace{0.5cm}
+\noindent
+\textbf{Commentary.}
+While the above proof~\cite{spencer1995probabilistic} is concise and elegant, it omits many low-level details that are often assumed in traditional mathematical exposition.
+For example, the definition of $\alpha(x)$ implicitly assumes that the minima involved are well-defined, and that comparisons among set weights are meaningful under all random assignments.
+Additionally, the reasoning about probabilities (e.g., the independence and uniformity of weights) relies on intuition rather than formal measure-theoretic grounding.
+These gaps, though acceptable in informal proofs, present significant challenges when one attempts to formalize such arguments in a theorem prover like Isabelle/HOL.
+Thus, part of the motivation of this project is bridge this gap by giving a fully rigorous, machine-checked account of the Isolation Lemma, including all technical conditions and edge cases often left implicit in classical proofs.
+In the next chapter, we will present a formalization of this result in Isabelle/HOL, making all implicit assumptions explicit and verifying each step within a constructive logical framework.
+
+\section{Parallel Algorithm for Perfect Matching}
