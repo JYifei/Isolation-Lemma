@@ -1,46 +1,35 @@
 \chapter{Introduction}
 \label{chp:intro}
 
-Randomization has become one of the central paradigms of modern theoretical computer science. 
-Over the past few decades, randomized methods have profoundly influenced the design and analysis of algorithms, enabling solutions that are simpler, faster, and even provably unattainable by deterministic methods.
+Randomization has become one of the central paradigms of modern theoretical computer science (TCS). 
+Over the past few decades, randomized methods have shaped the design and analysis of algorithms, yielding constructions that are simpler, faster, or in some settings seemingly out of reach for known deterministic techniques.
 
-From parallel computation to combinatorial optimization and approximation algorithms, randomness is often treated as a significant resource rather than a secondary heuristic.
+At the heart of randomized algorithms lies a collection of probabilistic lemmas that explain why randomness enforces useful structural properties -- for instance, why a random perturbation can isolate a unique optimum among many candidates.
+These lemmas are routinely invoked across areas such as parallel computation, combinatorial optimization and matching.
 
-Meanwhile, many core results of randomized algorithm theory are supported by probabilistic lemmas, the proofs of which are often highly abstracted.
-These proofs often rely on intuitive statements about probability, independence, and minimization, where detailed assumptions are often treated implicitly, and intermediate steps are frequently omitted.
+However, the proofs of such lemmas are often developed as pen-and-paper arguments, or circulate as folklore-style proofs that compress multiple layers of reasoning into a few lines.
+In these presentations, assumptions about probability spaces, measurability, independence, and minimization are commonly treated implicitly, and intermediate steps are omitted.
 
-While these proofs are understandable to humans, they present a significant challenge for formal verification within a rigorous logical framework, precisely because they rely on informal probabilistic intuition.
-In particular, probabilistic arguments often compress multiple layers of reasoning into concise informal claims, making hidden dependencies difficult to detect.
-This gap between informal reasoning and formal justification becomes especially pronounced in the context of randomized algorithms, where correctness is inherently probabilistic rather than absolute. 
+This proof style can be fragile: the intricate details sometimes fail to survive close mathematical scrutiny, especially when probabilistic reasoning interacts with nontrivial algorithmic constructions.
+Concrete instances of this phenomenon have appeared in recent work, where closer inspection or formal reconstruction revealed missing conditions or minor errors in widely cited arguments, both in cryptographic settings and in the analysis of advanced algorithmic techniques~\cite{yilei2024quant,kosaianetal2024coppersmith}.
 
-From a proof-methodological perspective, this reflects a transition from informal pen-and-paper arguments to pseudo-formal proofs that appear rigorous but still depend on unstated assumptions, and ultimately to fully formal, machine-checkable proofs.
-Randomized algorithm proofs are particularly sensitive to this transition, since properties such as independence, measurability, and uniqueness must be stated explicitly rather than justifies by intuition.
-The Isolation Lemma provides a compact yet representative case study for this transition, as it brings together these core ingredients in a single probabilistic argument. 
+Interactive theorem proving (ITP) provides a disciplined response to this challenge. 
+By requiring definitions and proof steps to be stated explicitly and checked mechanically, ITP strengthens rigor, turns informal mathematics into machine-checkable artifacts, and supports large-scale collaboration on proofs.
+Recent developments demonstrate that such mechanization can scale to nontrivial randomized algorithm analyses, for example by formally verifying the CVM distinct-elements streaming algorithm in Isabelle/HOL using functional probabilistic invariants to derive concentration bounds~\cite{karayeletal2025CVM}.
+Moreover, the resulting formal developments can serve as reusable digital building blocks, contributing to the broader effort of digitalizing mathematics and enabling human--AI collaboration in formal reasoning.
 
-Interactive theorem proving offers a disciplined way to address these problems.
-By encoding mathematical definitions and proofs into a formal logical system and verifying them mechanically through explicit reasoning steps, theorem provers provide a level of precision and reliability that cannot be achieved solely through informal reasoning.
-
-In recent years, there has been significant progress in the formalization of mathematics and deterministic algorithms. 
-However, formal proofs of randomized algorithms remain relatively underexplored, largely due to the additional complexity introduced by probabilistic reasoning.
-
-This thesis lies at the intersection of these two research directions. 
-Its goal is to formally verify a crucial probabilistic lemma for randomized algorithms — the Isolation Lemma — in the Isabelle/HOL theorem proving system.
-
-The Isolation Lemma is a fundamental tool in many randomized algorithms, notably in randomized algorithms for the Perfect Matching problem, where it is used to guarantee the uniqueness of minimum-weight structures with high probability.
-Despite its apparent simplicity, the Isolation Lemma involves several implicit assumptions about minimization, independence, and probability spaces.
-Explicitly stating and systematically verifying these assumptions is not only a technical challenge but also a valuable opportunity to clarify the logical structure underlying randomized algorithmic reasoning.
-
-Through a complete formalization of the Isolation Lemma and its application to a randomized Perfect Matching algorithm, this work aims to contribute to the broader effort of bringing probabilistic algorithm theory within the scope of machine-checked formal verification.
-
+This report contributes to the formal verification of probabilistic reasoning in TCS by formalizing the \emph{Isolation Lemma} in Isabelle/HOL.
+The Isolation Lemma is a key tool that assigns random weights to enforce, with high probability, a unique minimum-weight solution structure; it is notably used in randomized algorithms for the \textbf{Perfect Matching} problem.
+Our formalization makes the underlying probability space and all dependencies explicit, and we further apply the lemma to support the verification of a randomized perfect matching algorithm. 
 
 \section{Background}
 \subsection{Randomized Algorithms in TCS}
-Randomized Algorithms play a fundamental role in theoretical computer science.
+Randomized algorithms are a widely studied class of algorithms in theoretical computer science.
 
 Unlike deterministic algorithms, randomized algorithms incorporate randomness to break symmetry, simplify theoretical constructions, and achieve improved expected performance.
 Such algorithms have been widely used in matching problems, parallel computing, approximation algorithms, and the construction of complex combinatorial structures.
 
-In many classical results, the introduction of randomized weights serves as a general technique for enforcing certain "uniqueness" or "isolation" properties.
+In many classical results, the introduction of randomized weights serves as a general technique for enforcing certain ``uniqueness'' or ``isolation'' properties.
 For example, in several parallel algorithms and combinatorial optimization problems, algorithmic correctness relies on the fact that, after a random perturbation, a minimum structure becomes unique with high probability.
 
 The Isolation Lemma is a canonical instance of this principle. 
@@ -52,72 +41,70 @@ This lemma provides a theoretical foundation for numerous randomized algorithms 
 In theoretical computer science, many fundamental results rely on intricate mathematical arguments and precise logical reasoning.
 As theoretical frameworks continue to develop, the scale and complexity of such proofs have grown substantially, making traditional human-based verification increasingly difficult.
 
-Formalized mathematics and interactive theorem proving (ITP) offer a different approach to reasoning about mathematical theories.
+Formalized mathematics and interactive theorem proving (ITP) offer an alternative approach to reasoning about mathematical theories.
 In this setting, definitions, theorems, and proofs are encoded within a formal logical system, and every inference step is checked rigorously by a computer.
 This provides a level of precision and reliability that is difficult to achieve through informal reasoning alone.
 
-Compared to traditional pen-and-paper proofs, formalized theorem proving exhibits two distinctive characteristics.
-First, all implicit assumptions must be made explicit.
-These include, for example, the non-emptiness and finiteness of sets, the totality of functions, and the measurability of probability spaces.
-Second, the correctness of a proof does not rely on the intuition of the reader, but is guaranteed by the underlying logical framework of the theorem proving system.
+A key characteristic of interactive theorem proving is that all assumptions must be stated explicitly.
+These include structural properties such as the non-emptiness and finiteness of sets, the totality of functions, and in probabilistic settings, the measurability of events and constructions of probability spaces.
+As a consequence, formal proofs do not rely on the intuition of the reader, but on the soundness of the underlying logical framework. 
+
+Beyond individual correctness guarantees, ITP also contributes to the digitalization of mathematical proofs.
+Formal developments can be stored, reused, and extended, enabling large-scale collaboration and incremental verification across research communities.
+This shift supports new forms of human--computer and human--AI collaboration in mathematics and theoretical computer science.
 
 In recent years, formalized methods have been successfully applied across many areas in computer science, including program verification, compiler correctness, and the formalization of foundational mathematical theories.
 Within theoretical computer science, formal verification has gradually expanded from classical mathematical results to core theorems in algorithm theory and computational complexity.
 
-However, compared to deterministic settings, the formal verification of randomized algorithms poses additional challenges.
-Randomized algorithms involve not only complex combinatorial structures, but also probabilistic concepts such as independence, distributions, and expectations.
-In a formal setting, these notions must be expressed through explicit constructions of probability spaces, rather than being assumed implicitly.
+However, the formal verification of randomized algorithms poses additional challenges.
+Randomized algorithms combine complex combinatorial reasoning with probabilistic concepts such as independence, distributions, and expectations, all of which must be expressed through explicit constructions rather than being assumed implicitly.
+Against this background, the formal verification of key probabilistic lemmas has emerged as an important research direction in interactive theorem proving.
 
-Against this background, the formal verification of key probabilistic lemmas in randomized algorithms has become an important research direction in interactive theorem proving.
-The Isolation Lemma serves as a representative example of such results, combining combinatorial reasoning with probabilistic arguments, and thus provides an ideal case study for formalization.
-
-\section{Motivation}
-Although randomized algorithms have achieved significant success in both theory and practice, their correctness often relies on informal probabilistic and combinatorial reasoning.
-In traditional pen-and-paper proofs, conclusions such as “a minimum obviously exists”, “this event occurs with probability at most 1/N”, or “the relevant events are independent” are frequently treated as self-evident and left implicit.
-
-In a formal proof setting, however, such assumptions cannot be taken for granted.
-All logical dependencies must be stated explicitly and verified.
-For instance, the existence of a minimum depends on the non-emptiness and finiteness of the underlying set; probability statements require measurability; and independence cannot be asserted informally, but must be derived from the explicit construction of an underlying probability space.
-From a proof-theoretic perspective, this difficulty reflects a broader transition in proof development.
-Many arguments in randomized algorithms originate as informal pen-and-paper proofs, and are later refined into pseudo-formal proofs that closely resemble formal reasoning but still rely on implicit assumptions.
-Bridging this gap requires transforming such pseudo-formal arguments into fully formal proofs in which all probabilistic and structural dependencies are made explicit.
-
-As a consequence, randomized algorithms and their associated lemmas constitute a particularly challenging class of objects for interactive theorem proving (ITP). 
-On the one hand, they occupy a central position in theoretical computer science; on the other hand, they clearly demonstrate the strength of formal verification in clarifying hidden assumptions and exposing implicit reasoning steps.
-
-The Isolation Lemma is particularly well suited to serve as a case study for this transition.
-Its proof simultaneously involves probabilistic modeling, independence assumptions, minimization over finite structures, and the emergence of uniqueness through randomization.
-As a result, formalizing the Isolation Lemma requires addressing many of the central challenges that arise when translating informal probabilistic reasoning into a fully formal proof.
-
-This project is motivated by these considerations and aims to reconstruct the complete proof of the Isolation Lemma within a fully formalized and rigorous framework.
+The Isolation Lemma serves as a representative example of such results.
+It combines combinatorial minimization with probabilistic reasoning and thus provides an ideal case study for examining how randomized algorithmic arguments can be translated into fully formal, machine-checked proofs.
 
 \section{Project Objectives}
-The primary objective of this project is to formally model and prove Isolation Lemma within the Isabelle/HOL theorem proving system.
-Beyond establishing the statement of the lemma and its probability bound; this project aims to demonstrate a systematic transition from informal and pseudo-formal probabilistic arguments to fully formal, machine-checkable proofs.
+The primary objective of this project is to formally model and prove the Isolation Lemma within the Isabelle/HOL theorem proving system.
+This includes establishing its probabilistic statement, associated probability bounds, and the precise conditions under which uniqueness holds.
 
-In particular, this involves making explicit the assumptions and constructions that are typically left implicit in pen-and-paper proofs, including the underlying probability space, independence of random variables, and minimization over finite structures.
-Through this process, the project seeks to illustrate how pseudo-formal reasoning formed by translation from pen-and-paper proof can be transformed into a rigorous formal proof.
+To achieve this, the project explicitly formalizes the probabilistic and combinatorial structures underlying the lemma, including random weight assignments, independence of random variables, and minimization over finite sets.
 
 Specifically, this project aims to:
 \begin{itemize}
     \item formalize random weight functions together with their corresponding product probability spaces, thereby making probabilistic assumptions explicit;
-    \item provide a complete formal proof of the Isolation Lemma, including an explicit upper bound on the probability of non-uniqueness, and a precise characterization of the conditions under which uniqueness fails;
-    \item apply the formalized lemma to the correctness analysis of randomized algorithms, illustrating how the resulting formal proof support higher-level algorithmic reasoning.
+    \item provide a complete machine-checked proof of the Isolation Lemma, including an explicit upper bound on the probability of non-uniqueness and a precise characterization of failure conditions;
+    \item apply the formalized lemma to the correctness analysis of randomized algorithms, supporting higher-level algorithmic reasoning.
 \end{itemize}
 
-As a concrete application, this project employs the Isolation Lemma to formally verify a key probabilistic argument in a randomized algorithm for the Perfect Matching problem.
-This application serves to demonstrate the practical relevance of the formalization and show how isolation-based arguments can be carried through the full transition from informal reasoning to formal verification.
+As a concrete application, the Isolation Lemma is used to formally verify a key probabilistic argument in a randomized algorithm for the \textbf{Perfect Matching} problem.
 
 \section{Scope of Work}
-The scope of this project is primarily focused on theoretical formalization and proof construction.
+The scope of this project is focused on theoretical formalization and proof construction within the Isabelle/HOL framework.
 In particular, this report covers:
-
 \begin{itemize}
     \item the mathematical formulation of the Isolation Lemma and its formal expression;
     \item the probabilistic modeling of random weight assignments and their associated properties;
-    \item the formalization of critical construction steps within the proof;
-    \item a representative application of the lemma to Perfect Matching.
+    \item the formalization of key combinatorial and probabilistic arguments appearing in the proof;
+    \item a representative application of the lemma to the \textbf{Perfect Matching} problem.
 \end{itemize}
 
-This work does not address general derandomization techniques for randomized algorithms, nor does it consider implementation-level concerns or performance optimization of specific algorithms.
+This work does not address general derandomization techniques for randomized algorithms, nor does it consider implementation-level concerns or performance optimization.
 Moreover, the internal implementation details of the Isabelle/HOL system and its underlying logical foundations are beyond the scope of this report.
+
+\section{Report Outline}
+
+The remainder of this report is organized as follows.
+
+Chapter 2 (Preliminaries) introduces the background material required for this work, including randomized algorithms, probabilistic reasoning, and basic concepts from interactive theorem proving.
+This chapter is limited to definitions and results that are not part of the author's original contributions, and serves to establish the theoretical context for the formal developments that follow.
+
+Chapter 3 (Modeling) presents the formal modeling framework used throughout the report.
+It describes how the combinatorial and probabilistic structures underlying the Isolation Lemma are represented in Isabelle/HOL, including the construction of probability spaces and auxiliary definitions required for formal reasoning.
+
+Chapter 4 (Proof) contains the core formalization of the Isolation Lemma.
+The development is organized using a PP/SP/FP structure -- corresponding to pen-and-paper proofs (PP), structured proofs (SP), and fully formal proofs (FP) -- which is carefully motivated and employed to connect informal probabilistic intuition, precise formal statements, and fully machine-checked formal verification.
+
+Chapter 5 (Perfect Matching) applies the formalized Isolation Lemma to the verification of a randomized algorithm for the Perfect Matching problem.
+This chapter focuses on the high-level integration of the lemma into algorithmic reasoning.
+
+Finally, Chapter 6 (Conclusion) summarizes the main contributions of the report and discusses possible directions for future work.

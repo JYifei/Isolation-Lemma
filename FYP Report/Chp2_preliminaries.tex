@@ -1,11 +1,42 @@
 \chapter{Preliminaries}
 \label{chp:prelims}
 
+Before turning to the formal development of the Isolation Lemma, we briefly review the proof environment in which our formalization is carried out.
+This chapter introduces the basic ideas of interactive theorem proving and the Isabelle/HOL system, which together provide the logical and computational framework for the results developed in later chapters.
+The material presented here is purely preparatory and does not constitute original contributions.
 
 \section{Interactive Theorem Proving}
 
+Interactive theorem proving (ITP) is an approach to formal reasoning in which mathematical definitions, statements, and proofs are expressed within a precisely specified logical system and verified by a computer.
+Unlike fully automated theorem provers, interactive systems rely on human guidance to structure proofs, while delegating routine logical inference to the underlying proof engine.
+
+A central characteristic of interactive theorem proving is that all logical assumptions must be made explicit.
+Properties that are often left implicit in pen-and-paper proofs -- such as finiteness, non-emptiness, totality of functions, or measurability of events -- must be stated precisely and verified within the formal system.
+As a result, proofs developed in an interactive theorem prover do not appeal to informal intuition, but instead derive correctness solely from the soundness of the underlying logic.
+
+Interactive theorem proving has been successfully applied across a wide range of areas in computer science and mathematics, including program verification, compiler correctness, and the formalization of foundational mathematical theories.
+In algorithmic, ITP provides a principled framework for reasoning about complex algorithmic arguments, particularly when proofs involve subtle dependencies between combinatorial and logical assumptions.
+
+From a methodological perspective, ITP also supports the digitalization of mathematical proofs.
+Formal developments can be stored as machine-checkable artifacts, reused across projects, and extended collaboratively.
+This enables large-scale proof developments and supports emerging forms of human--computer and human--AI collaboration in formal reasoning.
 
 \section{Isabelle/HOL System}
+
+Isabelle is a generic interactive theorem proving framework that supports formal reasoning in a variety of logical systems.
+Among its most widely used instantiations is Isabelle/HOL, which is based on classical higher-order logic (HOL).
+In this setting, logical formulas are constructed using typed $\lambda$-calculus, and reasoning proceeds within a sound and expressive classical logic.
+
+Isabelle/HOL provides a rich environment for formal mathematical development.
+Its logic supports higher-order functions, inductive definitions, and structured proofs, making it well suited for the formalization of mathematical arguments arising in theoretical computer science.
+The system is accompanied by an extensive standard library covering areas such as sets, relations, algebraic structures, and real analysis.
+
+Of particular relevance to this report is Isabelle/HOL's support for probabilistic reasoning.
+The system includes a mature probability theory library that formalizes measure spaces, random variables, and probability distributions within the HOL framework.
+This allows probabilistic arguments to be expressed using explicit constructions of probability spaces and measurable functions, rather than relying on informal probabilistic intuition.
+
+Taken together, these features make Isabelle/HOL a suitable platform for the formal verification of randomized algorithms and probabilistic lemmas.
+It provides the logical expressiveness required to model combinatorial structures, as well as the mathematical infrastructure needed to reason rigorously about probability and randomness.
 
 \section{The Isolation Lemma}
 The Isolation Lemma, originally introduced by Mulmuley, Vazirani, and Vazirani~\cite{mulmuley1987matching}, is a probabilistic principle used to ensure that, with high probability, a unique solution exists among a family of sets.
@@ -16,7 +47,7 @@ It has found widespread applications in randomized algorithms, particularly in p
 \textbf{Informal Statement.}
 Let $U$ be a finite set (called the \emph{universe}), and let $\mathcal{F} \subseteq \mathcal{P}(U)$ be a non-empty family of subsets of $U$.
 Each element $x \in U$ is assigned a weight $w(x)$ independently and uniformly at random from $\{1, 2, \dots, N\}$ for some integer $N \ge 1$.
-The total weight of a set $S \in \mathcal{F}$ is defined as"
+The total weight of a set $S \in \mathcal{F}$ is defined as
 \[
     w(S) = \sum_{x \in S} w(x)    
 \]
@@ -28,7 +59,7 @@ The Isolation Lemma states that, with high probability, there is a unique set in
 \emph{
     Let $U$ be a finite set with $|U| = n$, and let $\mathcal{F} \subseteq \mathcal{P}(U)$ be a non-empty family of subsets.
     Suppose that each $x \in U$ is assigned an integer weight $w(x)$ drawn independently and uniformly at random from $\{1, 2, \dots, N\}$.
-    Then the probability that there exists a unique set $A \in \mathcal{F}$ that minimizers $w(S)$ is at least $1 - \frac{n}{N}$.
+    Then the probability that there exists a unique set $A \in \mathcal{F}$ that minimizes $w(S)$ is at least $1 - \frac{n}{N}$.
 }
 \[
     \Pr[\exists! A \in \mathcal{F} \text{ minimizing } w(A)] \ge 1 - \frac{n}{N} 
@@ -37,54 +68,141 @@ The Isolation Lemma states that, with high probability, there is a unique set in
 \vspace{0.5cm}
 \noindent
 \textbf{Proof Idea.}
-The proof relies on analyzing the probability that \emph{two or more} sets achieving the same minimum weight.
-The key technique is to consider the structure of conflicting pairs and show that their probability of collision is small.
-By summing over all such pairs and bounding their contribution, one obtains the upperbound $\frac{n}{N}$ on the failure probability.
+The proof analyzes the probability that \emph{two or more} sets in $\mathcal{F}$ attain the same minimum weight.
+The key observation is that such a collision can be attributed to a specific element whose randomly assigned weight causes two competing sets to tie.
+By bounding the probability of this event for each element and applying a union bound over the universe, one obtains the upper bound $\frac{n}{N}$ on the failure probability.
 
 \vspace{0.5cm}
 \noindent
-\textbf{Proof (Joel Spencer~\cite{spencer1995probabilistic}).}
-Let $U = \{e_1, e_2, \dots, e_n\}$ be a finite set of $n$ elements, and let $\mathcal{F} \subseteq \mathcal{P}(U)$ be a non-empty family of subset of $U$.
+\textbf{Representative Proof (after Spencer~\cite{spencer1995probabilistic}).}
+We include this classical argument as a representative proof of the Isolation Lemma for background and intuition;
+its fully formal treatment is developed later in the report.
+
+Let $U = \{e_1, e_2, \dots, e_n\}$ be a finite set of $n$ elements, and let $\mathcal{F} \subseteq \mathcal{P}(U)$ be a non-empty family of subsets of $U$.
 Suppose each element $x \in U$ is assigned a random weight $w(x)$ uniformly from $\{1, 2, \dots, N\}$.
 
 For any $x \in U$, define:
 \[
 \alpha(x) = \min_{\substack{S \in \mathcal{F} \\ x \notin S}} w(S)- \min_{\substack{S \in \mathcal{F} \\ x \in S}} w(S \setminus \{x\})
 \]
-This value $\alpha(x)$ depends only on the weights of elements other than $x$ itself, since $x$ is excluded from all weight sums in the definition.
-Because $w(x)$ is independently and uniformly chosen from $\{1, 2, \dots, N\}$, the probability that $w(x) = \alpha(x)$ is at most $1/N$.
+The quantity $\alpha(x)$ is determined by the weights of elements other than $x$ itself, and can therefore be viewed as fixed when conditioning on all weights except $w(x)$. 
+Since $w(x)$ is chosen independently and uniformly from $\{1, 2, \dots, N\}$, the probability that $w(x)$ coincides with this value is at most $1/N$.
 
-Now, suppose there are two distinct sets $A, B \in \mathcal{F}$ such that both minimize the total weight $w(S) = \sum_{x \in S} w(x)$.
+Now suppose there are two distinct sets $A, B \in \mathcal{F}$ such that both minimize the total weight $w(S) = \sum_{x \in S} w(x)$.
 Let $x \in A \triangle B$ (i.e., an element in the symmetric difference). Without loss of generality, suppose $x \in A \setminus B$.
 Then we have:
 \[
 \begin{aligned}
 \alpha(x) &= \min_{\substack{S \in \mathcal{F} \\ x \notin S}} w(S)- \min_{\substack{S \in \mathcal{F} \\ x \in S}} w(S \setminus \{x\})
-          &= w(B) - \left( w(A) - w(x) \right)
-          &= w(x)
 \end{aligned}
 \]
-So for this $x$, $w(x) = \alpha(x)$. The chance that this happens for any particular $x$ is at most $1/N$, and since there are at most $n$ such $x$, the total probability that some $x$ satisfies this is at most $n/N$.
+A direct calculation shows that $\alpha(x) = w(x)$ for such an element $x$.
 
-Thus, with probability at least $1 - \frac{n}{N}$, no such $x$ exists, and the minimum-weight set in $\mathcal{F}$ is unique.
+Thus, the event that two distinct minimizers exist implies that $w(x) = \alpha(x)$ for some $x \in U$.
+Since this occurs with probability at most $1/N$ for each $x$, a union bound over $n$ elements yields a total failure probability of at most $n/N$.
+
+Therefore, with probability at least $1 - \frac{n}{N}$, the minimum-weight set in $\mathcal{F}$ is unique.
 
 \vspace{0.5cm}
 \noindent
 \textbf{Remarks.}
 \begin{itemize}
-    \item The bound $1 - \frac{n}{N}$ improves as $N$ increases. In particular, for $N > 2n$, the probability of uniqueness exceeds $0.5$.
-    \item The lemma is non-constructive: it guarantees uniqueness probabilistically, but not which set is unique.
-    \item It is widely used in randomized parallel algorithms and in complexity theory, e.g., in the isolation of perfect matchings.
+    \item The probability bound $1 - \frac{n}{N}$ improves as $N$ increases.
+    \item The lemma is non-constructive: it guarantees uniqueness with high probability but does not identify the minimizing set.
+    \item The Isolation Lemma is a central tool in randomized algorithms, e.g., in the parallel algorithm for the \textbf{Perfect Matching} problem.
 \end{itemize}
 
-\vspace{0.5cm}
-\noindent
-\textbf{Commentary.}
-While the above proof~\cite{spencer1995probabilistic} is concise and elegant, it omits many low-level details that are often assumed in traditional mathematical exposition.
-For example, the definition of $\alpha(x)$ implicitly assumes that the minima involved are well-defined, and that comparisons among set weights are meaningful under all random assignments.
-Additionally, the reasoning about probabilities (e.g., the independence and uniformity of weights) relies on intuition rather than formal measure-theoretic grounding.
-These gaps, though acceptable in informal proofs, present significant challenges when one attempts to formalize such arguments in a theorem prover like Isabelle/HOL.
-Thus, part of the motivation of this project is bridge this gap by giving a fully rigorous, machine-checked account of the Isolation Lemma, including all technical conditions and edge cases often left implicit in classical proofs.
-In the next chapter, we will present a formalization of this result in Isabelle/HOL, making all implicit assumptions explicit and verifying each step within a constructive logical framework.
+This argument is presented at a high level and relies on several assumptions
+that are left implicit in classical presentations, including the existence of
+the minima involved, the independence structure of the weight assignments, and
+the measurability of the relevant events.
+Making these assumptions explicit is a central goal of the formal development
+in later chapters.
+
 
 \section{Parallel Algorithm for Perfect Matching}
+
+\subsection{The Perfect Matching Problem}
+\label{subsec:perfect-matching-problem}
+
+Let $G = (V,E)$ be an undirected graph.
+A \emph{matching} in $G$ is a set of edges such that no two edges share a common endpoint.
+A matching is called a \emph{perfect matching} if every vertex in $V$ is incident to exactly one edge in the matching.
+
+The \emph{Perfect Matching problem} asks whether a given graph admits a perfect matching, and in the constructive setting, how to identify such a matching.
+This problem occupies a central position in graph algorithms and combinatorial optimization, and has been studied extensively from both complexity-theoretic and algorithmic perspectives.
+
+From a combinatorial viewpoint, the difficulty of the problem lies in the global nature of the constraint: a perfect matching must cover all vertices simultaneously, and local choices of edges may interact in complex ways.
+As a consequence, large graphs may admit many distinct perfect matchings, or none at all, and the presence of multiple solutions introduces significant structural symmetry.
+
+In this report, we focus on algorithmic approaches that reason about the existence or identification of a perfect matching through indirect means, rather than by explicit enumeration of all candidate matchings.
+In particular, we are interested in settings where the goal is to distinguish a single solution among many combinatorially equivalent possibilities, a theme that will play a crucial role in the randomized and parallel algorithms discussed in subsequent sections.
+
+\subsection{Challenges in Parallel and Algebraic Approaches}
+
+One of the main difficulties in the Perfect Matching problem arises from the high degree of symmetry inherent in its solution space.
+A graph may admit many distinct perfect matchings, none of which is distinguished \emph{a priori}.
+From an algorithmic perspective, this symmetry complicates both the decision and construction tasks, as no local criterion suffices to single out a particular solution.
+
+This issue is particularly pronounced in the context of parallel computation.
+Parallel algorithms aim to exploit independence and concurrency, but symmetry among solutions often prevents independent local decisions from composing into a globally consistent matching.
+In the absence of a canonical choice, parallel processes may conflict or fail to converge on a single valid solution.
+
+From a complexity-theoretic viewpoint, this symmetry barrier is a central obstacle in the design of efficient parallel algorithms for matching.
+While the Perfect Matching problem is solvable in polynomial time by classical sequential algorithms, obtaining highly parallel algorithms requires additional structure to break this symmetry in a controlled way.
+
+Randomization provides a powerful mechanism for addressing this challenge.
+By introducing randomness into the problem instance, one can perturb the solution space so that, with high probability, a unique solution emerges.
+This transformation allows parallel procedures to reason about a single distinguished object rather than an entire symmetric family of solutions.
+
+The Isolation Lemma formalizes this idea.
+By assigning random weights to the elements of the underlying structure, it ensures that, with high probability, a unique minimum-weight solution exists.
+In the context of the Perfect Matching problem, this means that among all perfect matchings, one becomes uniquely minimal under the random weighting.
+This isolation property serves as a crucial bridge between the combinatorial structure of matchings and the design of efficient randomized parallel algorithms.
+
+In the following chapters, we make this connection precise.
+Chapter~\ref{chp:modeling} introduces the formal modeling of random weight assignments and their associated probability spaces, while Chapter~\ref{chp:proof} develops a fully formal proof of the Isolation Lemma.
+These results are then applied in Chapter~\ref{chp:matching} to support the verification of a randomized approach to the Perfect Matching problem.
+
+
+\subsection{Random Weighting and the Isolation Principle}
+
+A common strategy for breaking symmetry in combinatorial optimization problems is to introduce randomness through \emph{random weighting}.
+Instead of reasoning about all feasible solutions equally, one assigns random weights to the basic elements of the structure and compare solutions by their total weight.
+
+In the context of the Perfect Matching problem, this means assigning random weights to edges and considering the total weight of a matching as the sum of the weights of its constituent edges.
+While many perfect matchings may exist in the original unweighted graph, the random perturbation alters the comparison criterion among them.
+
+The central idea behind this approach is that, under a random weighting, ties between distinct solutions become unlikely.
+Intuitively, two different matchings differ on at least one edge, and the random weight assigned to that edge can be expected to break the tie between their total weights.
+As a result, with high probability, one matching becomes strictly lighter than all others.
+
+This intuition is formalized by the \emph{isolation principle}.
+Rather than guaranteeing the existence of a solution, isolation guarantees that, among all feasible solutions, a unique minimum-weight solution emerges with high probability after random perturbation.
+Crucially, this uniqueness is not imposed deterministically, but is obtained as a probabilistic property of the random weight assignment.
+
+From an algorithmic perspective, isolation transforms the structure of the problem.
+Instead of reasoning about a symmetric family of solutions, an algorithm can focus on a single distinguished object: the unique minimum-weight solution.
+This shift is particularly important in parallel computation, where global coordination among many equivalent solutions is difficult to achieve.
+
+The Isolation Lemma provides a precise probabilistic statement of this principle.
+It quantifies the probability with which random weighting isolates a unique minimum-weight solution, and identifies the parameters that control the failure probability.
+In subsequent chapters, we formalize this lemma and show how it can be used to support the verification of randomized parallel algorithms for the Perfect Matching problem.
+
+
+\subsection{Role of the Isolation Lemma in Perfect Matching Algorithms}
+
+In randomized and parallel algorithms for the Perfect Matching problem, the Isolation Lemma plays a structural rather than computational role.
+It is not used to construct a matching directly, but to justify the assumption that a single, well-defined solution can be singled out from a potentially large and symmetric solution space.
+
+Many algorithmic techniques for Perfect Matching rely on testing global properties of the solution set, such as the existence of a minimum-weight matching satisfying certain conditions.
+When multiple minimum solutions exist, these tests may become ambiguous or fail to compose correctly in a parallel setting.
+The presence of several equally optimal matchings prevents local decisions from coherently identifying a global solution.
+
+The Isolation Lemma resolves this difficulty by guaranteeing, with high probability, the uniqueness of the minimum-weight perfect matching after random perturbation.
+The uniqueness allows the algorithm to treat the minimum matching as a distinguished object, eliminating ambiguity in subsequent reasoning steps.
+As a result, algorithmic predicates that would otherwise range over many solutions can be evaluated with respect to a single canonical one.
+
+Importantly, algorithms do not depend on the specific mechanism by which isolation is achieved.
+Instead, they assume isolation as a probabilistic precondition and derive correctness from the properties that follow from uniqueness.
+The Isolation Lemma provides the formal justification for this assumption, linking randomized preprocessing to the correctness of higher-level algorithmic reasoning.

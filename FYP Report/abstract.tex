@@ -1,9 +1,9 @@
 \chapter*{Abstract}
 
 Randomized algorithms are a cornerstone of modern theoretical computer science, yet their proofs often rely on informal probabilistic intuition that obscures critical assumptions about independence and measurability.
-This report presents a formal verification of the \textbf{Isolation Lemma} -- a fundamental principle ensuring the uniqueness of minimum-weight structures -- within the \textbf{Isabelle/HOL} interactive theorem prover.
+This report presents a formal verification of the \textbf{Isolation Lemma}, a key tool in randomized algorithms that isolates a unique minimum-weight solution by randomly assigning weights to combinatorial problems such as the \textbf{Perfect Matching} problem.
+By carrying out this formalization in the \textbf{Isabelle/HOL} interactive theorem prover, we make all probabilistic assumptions explicit and machine-checkable, thereby strengthening the rigor of the underlying algorithmic reasoning.
 
-We explicitly construct the underlying product probability space for random weight assignments and formalize the conditions for the existence and uniqueness of minimizers over finite sets.
-By rigorously defining the auxiliary value $\alpha(x)$ and proving its independence from individual weights $w(x)$, we formally derive the upper bound on the failure probability.
-Furthermore, this formalization serves as the theoretical foundation for verifying a randomized parallel algorithm for the \textbf{Perfect Matching problem}.
-The results demonstrate how pseudo-formal probabilistic arguments can be transformed into fully machine-checked proofs, clarifying hidden dependencies in algorithmic reasoning.
+We begin by formally specifying the Isolation Lemma, including the underlying product probability space for random weight assignments, the precise statement of the lemma, and the combinatorial constructions required to reason about minimizers over finite sets.
+Building on this foundation, we develop a complete machine-checked proof by synthesizing and reconciling arguments scattered across multiple informal and folklore-style presentations of the lemma and resolving implicit assumptions present in their informal treatments.
+Finally, we apply the formalized Isolation Lemma to verify a randomized parallel algorithm for the \textbf{Perfect Matching} problem, demonstrating how classical randomized algorithmic techniques can be systematically integrated into a rigorous formal verification framework.
