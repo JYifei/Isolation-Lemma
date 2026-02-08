@@ -37,42 +37,16 @@ lemma term_value_zero:
   assumes "p permutes{0..<n}"
   assumes "\<not>is_perfect_matching p"
   shows "(\<Prod>i = 0..<n. D_entry i (p i)) = 0"
-proof -
-  obtain i where "i < n" and "(i, p i) \<notin> E"
-    using assms is_perfect_matching_def by auto
-
-  hence "D_entry i(p i) = 0"
-    unfolding D_entry_def by auto
-
-  then show ?thesis
-    using \<open>i < n\<close> by auto
-qed
+  using assms
+  by (auto simp: is_perfect_matching_def D_entry_def)
 
 lemma term_value_non_zero:
   assumes "p permutes{0..<n}"
   assumes "is_perfect_matching p"
   shows "abs (\<Prod>i = 0..<n. D_entry i (p i)) = (2::int) ^ (matching_weight p)"
-proof -
-  have " (\<Prod>i = 0..<n. D_entry i (p i)) =  (\<Prod>i = 0..<n. (2::int)^ (w i (p i)))"
-  proof (rule prod.cong)
-    show "{0..<n} = {0..<n}" by simp
-    fix i assume "i \<in> {0..<n}"
-    have "i < n" using \<open>i \<in> {0..<n}\<close> by simp
-    have "(i, p i) \<in> E" using assms \<open>i < n\<close>
-      unfolding is_perfect_matching_def by auto
-    then show "D_entry i (p i) = (2::int) ^ (w i (p i))"
-      unfolding D_entry_def by simp
-  qed
-
-  also have "... = (2::int) ^ (\<Sum>i = 0..<n. w i(p i))"
-    by (simp add: power_sum) 
-
-  also have "... = (2::int) ^ (matching_weight p)"
-    unfolding matching_weight_def by auto
-
-  finally show ?thesis by auto
-qed
-
+  using assms
+  unfolding D_entry_def matching_weight_def is_perfect_matching_def
+  by (auto simp: abs_prod power_sum intro!: prod.cong)
 
 lemma multiplicity_2_abs:
   fixes x :: int
@@ -83,93 +57,49 @@ lemma multiplicity_2_abs:
       multiplicity_same_power zdvd1_eq)
 
 lemma finite_perfect_matchings: "finite {p. is_perfect_matching p}"
-proof -
-  have "finite {0..<n}" by simp
-
-  then have "finite {p. p permutes {0..<n}}"
-    by (simp add: finite_permutations)
-
-  moreover have "{p. is_perfect_matching p} \<subseteq>  {p. p permutes {0..<n}}"
-    by (simp add: Collect_mono is_perfect_matching_def)
-
-  ultimately show ?thesis
-    using rev_finite_subset by blast
-qed
-
+  unfolding is_perfect_matching_def
+  using finite_permutations finite_atLeastLessThan
+  by force
 
 lemma minimum_weight:
   assumes "is_perfect_matching p"
   shows "matching_weight p \<ge> min_weight_val"
-proof -
-  have non_empty: "{matching_weight r | r. is_perfect_matching r} \<noteq> {}"
-    using assms by blast
-
-  have finite_set: "finite {matching_weight r | r. is_perfect_matching r}"
-    using finite_perfect_matchings by simp
-
-  have "min_weight_val = Min {matching_weight r | r. is_perfect_matching r}" 
-    unfolding min_weight_val_def by simp
-
-  moreover have "matching_weight p \<in> {matching_weight r | r. is_perfect_matching r}"
-    using assms by auto
-
-  ultimately show ?thesis
-    by (simp add:
-        \<open>finite {matching_weight r |r. is_perfect_matching r}\<close>)
-qed
+  unfolding min_weight_val_def
+  using assms finite_perfect_matchings
+  using Min_le finite_image_set by blast
 
 lemma multiplicity_2_not_dvd_Suc:
   fixes x :: int and k :: nat
   assumes hk: "multiplicity (2::int) x = k"
     and hx: "x \<noteq> 0"
   shows "\<not> (2::int) ^ (k + 1) dvd x"
-proof
-  assume h: "(2::int) ^ (k + 1) dvd x"
-  have "k+1 \<le> multiplicity (2::int) x"
-    using h multiplicity_2_abs
-    by (simp add: hx multiplicity_geI)
-  thus False
-    by (simp add: hk)
-qed
+  using assms multiplicity_geI[of x 2 "k+1"]
+  using add_le_same_cancel1 le_numeral_extra(2) odd_Numeral1
+  by blast
+
 
 lemma terms_divisible_by_min_weight:
   shows "\<forall>p. p permutes {0..<n} \<longrightarrow> (2::int) ^ min_weight_val dvd (sign p * (\<Prod>i=0..<n. D_entry i (p i)))"
 proof (intro allI impI)
-  fix p assume perm: "p permutes {0..<n}"
-  let ?term = "sign p * (\<Prod>i=0..<n. D_entry i (p i))"
-
-  show "(2::int) ^ min_weight_val dvd ?term"
+  fix p assume p_perm: "p permutes {0..<n}"
+  show "(2::int) ^ min_weight_val dvd (sign p * (\<Prod>i=0..<n. D_entry i (p i)))"
   proof (cases "is_perfect_matching p")
-    case False
-    then show ?thesis
-      using term_value_zero perm
-      by (metis even_mult_iff even_numeral mult_numeral_1_right
-          power_eq_0_iff times_int_code(1) zdvd_mono
-          zero_neq_numeral)
-  next
     case True
-    have ge: "matching_weight p \<ge> min_weight_val"
-      by (simp add: True bipartite_graph.minimum_weight) 
-
-    have abs_eq: "abs ?term = (2::int) ^ matching_weight p"
-    proof -
-      have "abs ?term = abs (sign p) * abs (\<Prod>i=0..<n. D_entry i (p i))"
-        using abs_mult by blast
-      also have "... = abs(sign p) * ((2::int) ^ matching_weight p)"
-        using True perm term_value_non_zero by presburger
-      also have "... = (2::int) ^ matching_weight p" by auto
-      finally show ?thesis by simp
-    qed
-
-    have "(2::int) ^ min_weight_val dvd (2::int) ^ matching_weight p"
-      using ge by (simp add: dvd_power_iff)
-
-    then have "(2::int) ^ min_weight_val dvd abs ?term"
-      using abs_eq by presburger
-
+    have "min_weight_val \<le> matching_weight p"
+      using True minimum_weight by simp
+    then have "(2::int) ^ min_weight_val dvd (2::int) ^ matching_weight p"
+      by (simp add: le_imp_power_dvd)
+    then have "(2::int) ^ min_weight_val dvd abs (\<Prod>i=0..<n. D_entry i (p i))"
+      by (simp add: True p_perm term_value_non_zero)
     then show ?thesis
-      using dvd_abs_iff by blast
-
+      using dvd_abs_iff dvd_mult by blast
+  next
+    case False
+    have "(\<Prod>i=0..<n. D_entry i (p i)) = 0"
+      using term_value_zero[OF p_perm False] by simp
+    then show ?thesis
+      by (metis even_zero mult_1s(2) power_not_zero times_int_code(1)
+          zdvd_mono zero_neq_numeral)
   qed
 qed
 
@@ -178,241 +108,106 @@ qed
 lemma no_perfect_matching_det_0:
   assumes "\<nexists>p. is_perfect_matching p"
   shows "det_D = 0"
-proof -
-  have term_zero: "\<forall>p. p permutes{0..<n} \<longrightarrow>( \<Prod>i=0..<n. D_entry i(p i)) = 0"
-  proof (intro allI impI)
-    fix p assume "p permutes {0..<n}"
-    have "\<not>is_perfect_matching p"
-      using assms by auto
-    then show "(\<Prod>i = 0..<n. D_entry i (p i)) = 0"
-      using `p permutes {0..<n}` term_value_zero by simp
-  qed
-  have "(\<Sum>p \<in> {p. p permutes{0..<n}}. sign p * (\<Prod>i = 0..<n. D_entry i (p i))) = 0"
-    by (simp add: term_zero)
-  then show ?thesis
-    unfolding det_D_def by auto
-qed
-
+  unfolding det_D_def
+  using assms term_value_zero
+  by (simp add: sum.neutral)
 
 (*Case 2: One Perfect Matching Case with Unique Minimum Weight Exists*)
 lemma unique_det_power_of_weight:
   assumes "unique_min_weight_condition"
   shows "multiplicity 2 det_D = min_weight_val"
 proof -
-  obtain p_min where p_min_props:
+  obtain p_min where p_props:
     "is_perfect_matching p_min"
     "matching_weight p_min = min_weight_val"
     "\<forall>q. is_perfect_matching q \<and> matching_weight q = min_weight_val \<longrightarrow> q = p_min"
-  proof -
-    have "\<exists>! p. is_perfect_matching p \<and> matching_weight p = min_weight_val"
-      using assms unique_min_weight_condition_def by auto
-    then show ?thesis 
-      using that by blast
-  qed
+    using assms unique_min_weight_condition_def by blast 
 
+  let ?term = "\<lambda>p. sign p * (\<Prod>i = 0..<n. D_entry i (p i))"
+  have split_sum : "det_D = ?term p_min + 
+                            (\<Sum>p \<in> {p. p permutes {0..<n}} - {p_min}. ?term p)"
+    unfolding det_D_def
+    using p_props(1) is_perfect_matching_def
+    by (simp add: sum_diff1 finite_permutations)
 
-  let ?S_all = "{p. p permutes {0..<n}}"
-  let ?S_other = "?S_all - {p_min}"
-  have split_sum : "det_D = (sign p_min * (\<Prod>i = 0..<n. D_entry i (p_min i))) +
-                            (\<Sum>p \<in> ?S_other. sign p * (\<Prod>i = 0..<n. D_entry i (p i)))"
-  proof - 
-    have p_in_S: "p_min \<in> ?S_all"
-      using p_min_props(1) 
-      unfolding is_perfect_matching_def by simp
+  have val_p_min: "multiplicity 2 (?term p_min) = min_weight_val"
+    using p_props(1,2) term_value_non_zero is_perfect_matching_def multiplicity_2_abs
+    by (auto simp: abs_mult)
 
-    have S_finite: "finite ?S_all"
-      using finite_permutations by auto
+  have dvd_rest: "2 ^ (min_weight_val + 1) dvd (\<Sum>p \<in> {p. p permutes {0..<n}} - {p_min}. sign p * (\<Prod>i = 0..<n. D_entry i (p i)))"
+  proof (rule dvd_sum)
+    fix q assume "q \<in> {p. p permutes {0..<n}} - {p_min}"
+    then have q_perm: "q permutes {0..<n}" and q_neq: "q \<noteq> p_min" by auto
 
-    show ?thesis
-      unfolding det_D_def
-      by (metis (mono_tags, lifting) S_finite
-          insert_absorb p_in_S sum.insert_remove)
-  qed
-
-  have val_min: "multiplicity 2  (sign p_min * (\<Prod>i = 0..<n. D_entry i (p_min i))) = min_weight_val"
-    proof -
-    have perm_min: "p_min permutes {0..<n}"
-      using p_min_props(1) unfolding is_perfect_matching_def by auto
-
-    have abs_prod:
-      "abs (\<Prod>i = 0..<n. D_entry i (p_min i)) = (2::int) ^ min_weight_val"
-      using p_min_props(1,2) perm_min term_value_non_zero
-      by presburger
-
-    have sign_pm1: "sign p_min = (1::int) \<or> sign p_min = -1"
-      using sign_cases by blast
-
-    have abs_term:
-      "abs (sign p_min * (\<Prod>i = 0..<n. D_entry i (p_min i))) = (2::int) ^ min_weight_val"
-      using abs_prod sign_pm1 by force 
-
-    show ?thesis
-      using abs_term multiplicity_2_abs by blast
-  qed
-
-
-  have min_dvd_other: "2 ^ (min_weight_val + 1) dvd (\<Sum>p \<in> ?S_other. sign p * (\<Prod>i = 0..<n. D_entry i (p i)))"
-  proof -
-    have each_term_divisible:
-      "\<forall>p \<in> ?S_other. (2::int) ^ (min_weight_val + 1) dvd (sign p * (\<Prod>i = 0..<n. D_entry i (p i)))"
-    proof
-      fix p
-      assume p_in_other: "p \<in> ?S_other"
-
-      show "(2::int) ^ (min_weight_val + 1) dvd (sign p * (\<Prod>i = 0..<n. D_entry i (p i)))"
-      proof(cases "is_perfect_matching p")
-        case False
-        then have prod_zero: "(\<Prod>i=0..<n. D_entry i (p i)) = 0"
-          using p_in_other term_value_zero by auto
-        then show ?thesis
-          by (metis dvd_0_right mult_zero_right) 
-      next
-        case True
-        have perm_p: "p permutes {0..<n}"
-          using True is_perfect_matching_def by auto
-
-        have weight_greater: "matching_weight p > min_weight_val"
-        proof -
-          have p_not_pmin: "p \<noteq> p_min"
-            using p_in_other by blast
-
-          have weight_neq_min: "matching_weight p \<noteq> min_weight_val"
-            using True p_min_props(3) p_not_pmin by auto 
-
-          have weight_greater_min: "matching_weight p \<ge> min_weight_val"
-            by (simp add: True minimum_weight)
-            
-
-          then show ?thesis
-            using weight_neq_min by auto 
-        qed
-
-        then have weight_lower_bound: "matching_weight p \<ge> min_weight_val + 1"
-          by simp
-
-        have abs_prod: "abs (\<Prod>i=0..<n. D_entry i (p i)) = (2::int) ^ (matching_weight p)"
-          using True perm_p term_value_non_zero by blast          
-
-        have abs_term: "abs (sign p * (\<Prod>i=0..<n. D_entry i (p i))) = (2::int) ^ (matching_weight p)"
-        proof -
-          have  "abs (sign p * (\<Prod>i=0..<n. D_entry i (p i))) = abs (sign p) * abs (\<Prod>i=0..<n. D_entry i (p i))"
-            using abs_mult by blast 
-          also have "... = 1 * abs (\<Prod>i=0..<n. D_entry i (p i))"
-            by (metis abs_1 abs_zmult_eq_1 sign_idempotent)
-          also have "... = abs (\<Prod>i=0..<n. D_entry i (p i))"
-            by simp
-          also have "... = (2::int) ^ (matching_weight p)"
-            by (simp add: local.abs_prod) 
-          finally show ?thesis
-            by auto 
-          qed
-            
-        have power_divides: "(2::int) ^ (matching_weight p) dvd (sign p *(\<Prod>i=0..<n. D_entry i (p i)))"
-          by (metis abs_term dvd_abs_iff dvd_refl)
-          
-
-        have power_inequality: "(2::int) ^  (min_weight_val + 1) dvd (sign p *(\<Prod>i=0..<n. D_entry i (p i)))"
-          using power_divides power_le_dvd weight_lower_bound by blast
-         
-
-        then show ?thesis
-          by blast
-      qed
+    show "(2::int) ^ (min_weight_val + 1) dvd ?term q"
+    proof (cases "is_perfect_matching q")
+      case False
+      then show ?thesis using term_value_zero[OF q_perm]
+        by (metis arith_simps(63) dvd_0_right)
+    next
+      case True
+      have "matching_weight q > min_weight_val"
+        using True q_neq p_props(3) minimum_weight by fastforce
+      then have "(2::int) ^ (min_weight_val + 1) dvd (2::int) ^ matching_weight q"
+        using interval_class.less_imp_in_less_eq le_imp_power_dvd
+        by blast
+      then show ?thesis
+        using term_value_non_zero[OF q_perm True]
+        by (metis abs_sign dvd_abs_iff idom_class.dvd_mult_unit_iff'
+            zdvd1_eq)
     qed
-
-    show ?thesis
-      using dvd_sum each_term_divisible by fastforce
   qed
-
-
-  have det_multiplicity: 
-    "multiplicity 2 det_D = min_weight_val"
-  proof -
-    let ?A = "(sign p_min * (\<Prod>i = 0..<n. D_entry i (p_min i)))"
-    let ?B = "(\<Sum>p \<in> ?S_other. sign p * (\<Prod>i = 0..<n. D_entry i (p i)))"
-    let ?k = "min_weight_val"
-
-    have A_nonzero: "?A \<noteq> 0"
-    proof
-      assume h0: "?A = 0"
-      hence "abs ?A = 0" by simp
-      moreover have "(2::int)^?k \<noteq> 0" by simp
-      ultimately show False
-        by (metis
-            \<open>\<And>thesis. (\<And>p_min. is_perfect_matching p_min \<Longrightarrow> matching_weight p_min = min_weight_val \<Longrightarrow> \<forall>q. is_perfect_matching q \<and> matching_weight q = min_weight_val \<longrightarrow> q = p_min \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close>
-            bipartite_graph.is_perfect_matching_def h0 mult_eq_0_iff
-            p_min_props(3) sign_nz term_value_non_zero) 
-    qed
-
-    have det_split: "det_D = ?A + ?B"
-      using split_sum by blast
-
-    have dvd_k: "(2::int) ^ ?k dvd det_D"
-    proof -
-      have "(2::int) ^ ?k dvd ?A"
-        by (metis multiplicity_dvd val_min)
-      have "(2::int) ^ ?k dvd ?B"
-        using min_dvd_other by auto
-      then have "(2::int) ^ ?k dvd ?A + ?B"
-        using
-          \<open>2 ^ min_weight_val dvd (\<Sum>p\<in>{p. p permutes {0..<n}} - {p_min}. sign p * (\<Prod>i = 0..<n. D_entry i (p i)))\<close>
-          \<open>2 ^ min_weight_val dvd sign p_min * (\<Prod>i = 0..<n. D_entry i (p_min i))\<close>
-          dvd_add_right_iff by blast
-
-      thus ?thesis
-        by (metis split_sum) 
-    qed
-
-    have not_dvd_A_ge_k: "\<not>(2::int) ^ (?k + 1) dvd ?A"
-      using multiplicity_2_not_dvd_Suc[OF val_min A_nonzero] .
-
-    have not_dvd_ge_k: "\<not>(2::int) ^ (?k + 1) dvd det_D"
-    proof
-      assume hdet: "(2::int) ^ (?k + 1) dvd det_D"
-      have hsum: "(2::int) ^ (?k + 1) dvd ?A + ?B"
-        by (metis hdet split_sum)
-
-      have hA: "(2::int) ^ (?k + 1) dvd ?A"
-        using dvd_add_left_iff hsum min_dvd_other by blast
-
-      show False
-        using hA not_dvd_A_ge_k by auto 
-    qed
-
-    have not_dvd_suc: "\<not> (2::int) ^ Suc ?k dvd det_D"
-      using not_dvd_ge_k by simp
-
-    show ?thesis 
-      using dvd_k not_dvd_suc
-      by (rule multiplicity_eqI)
-  qed
-
   show ?thesis
-    by (simp add: det_multiplicity)
+  proof (rule multiplicity_eqI)
+    let ?A = "?term p_min"
+    let ?B = "\<Sum>p \<in> {p. p permutes {0..<n}} - {p_min}. ?term p"
+
+    show "(2::int) ^ min_weight_val dvd det_D"
+    proof -
+      have "(2::int) ^ min_weight_val dvd?A"
+        using val_p_min multiplicity_dvd by metis
+      moreover have "(2::int) ^ min_weight_val dvd ?B"
+        using dvd_rest power_le_dvd le_add1 by blast
+      ultimately show ?thesis
+        using split_sum by simp
+    qed
+  next
+    show "\<not> (2::int) ^ (Suc min_weight_val) dvd det_D"
+    proof
+      let ?A = "?term p_min"
+      let ?B = "\<Sum>p \<in> {p. p permutes {0..<n}} - {p_min}. ?term p"
+
+      assume "(2::int) ^ (Suc min_weight_val) dvd det_D"
+      then have "(2::int) ^ (min_weight_val + 1) dvd ?A + ?B"
+        using split_sum by simp
+      then have "(2::int) ^ (min_weight_val + 1) dvd ?A"
+        using dvd_rest dvd_add_left_iff by blast
+      moreover have "?A \<noteq> 0"
+        using p_props(1) term_value_non_zero is_perfect_matching_def
+        by (metis abs_0 no_zero_divisors power_eq_0_iff rel_simps(28,46)
+            sign_nz)
+
+      ultimately show False
+        using multiplicity_2_not_dvd_Suc[OF val_p_min] by auto
+    qed
+  qed
 qed
+
 
 (*Case 3: More Than One Perfect Matching Case with Unique Minimum Weight Exists*)
 lemma not_unique_zero_or_min_weight:
   assumes "\<exists>p. is_perfect_matching p"
   shows "det_D = 0 \<or> multiplicity 2 det_D \<ge> min_weight_val"
-proof -
-  have all_div: "\<forall>p. p permutes{0..<n} \<longrightarrow> (2::int) ^ min_weight_val dvd (sign p * (\<Prod>i=0..<n. D_entry i (p i)))"
-    using terms_divisible_by_min_weight by blast
-
-  have dvd_total: "(2::int) ^ min_weight_val dvd det_D"
+proof (cases "det_D = 0")
+  case False
+  have "(2::int) ^ min_weight_val dvd det_D"
     unfolding det_D_def
-    by (metis (no_types, lifting) all_div dvd_sum
-        mem_Collect_eq)
-
-  show ?thesis
-  proof (cases "det_D = 0")
-    case True then show ?thesis by simp
-  next
-    case False
-    then show ?thesis
-      by (simp add: dvd_total multiplicity_geI)
-  qed
-qed
+    using terms_divisible_by_min_weight dvd_sum
+    by (metis (lifting) mem_Collect_eq)
+  then show ?thesis
+    using False multiplicity_geI
+    using odd_one by blast
+qed (simp)
 
 (*2. Edge Isolation Logic*)
 (*We want to show the parallel algorithm correct,
