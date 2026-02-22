@@ -113,6 +113,116 @@ lemma no_perfect_matching_det_0:
   by (simp add: sum.neutral)
 
 (*Case 2: One Perfect Matching Case with Unique Minimum Weight Exists*)
+lemma unique_subset_sum_power_of_weight:
+  fixes S :: "(nat \<Rightarrow> nat) set"
+  assumes "finite S"
+  assumes "p_min \<in> S"
+  assumes p_min_pm: "is_perfect_matching p_min"
+  assumes p_min_unique: "\<forall>q \<in> S - {p_min}. is_perfect_matching q \<longrightarrow> matching_weight q > matching_weight p_min"
+  assumes S_permutes: "\<forall>p \<in> S. p permutes {0..<n}"
+  shows sum_nonzero: "(\<Sum>p \<in> S. sign p * (\<Prod>k=0..<n. D_entry k (p k))) \<noteq> 0"
+    and sum_multiplicity: "multiplicity 2 (\<Sum>p \<in> S. sign p * (\<Prod>k=0..<n. D_entry k (p k))) = matching_weight p_min"
+proof -
+  let ?w_min = "matching_weight p_min"
+  let ?term = "\<lambda>p. sign p * (\<Prod>i = 0..<n. D_entry i(p i))"
+  let ?A = "?term p_min"
+  let ?B = "(\<Sum>p \<in> S - {p_min}. ?term p)"
+
+  have split_sum: "(\<Sum>p \<in> S. ?term p) = ?A + ?B"
+    using assms(1,2) by (simp add: sum.remove)
+
+  have val_A: "multiplicity 2 ?A = matching_weight p_min"
+    using p_min_pm term_value_non_zero S_permutes assms(2) multiplicity_2_abs
+    by (auto simp: abs_mult)
+
+  have dvd_B: "(2::int) ^ (matching_weight p_min + 1) dvd ?B"
+  proof (rule dvd_sum)
+    fix q assume "q \<in> S - {p_min}"
+    then have q_perm: "q permutes {0..<n}" and q_neq: "q \<noteq> p_min"
+      using S_permutes by auto
+
+    show "(2::int) ^ (matching_weight p_min + 1) dvd ?term q"
+    proof (cases "is_perfect_matching q")
+      case False
+      have "(\<Prod>k=0..<n. D_entry k (q k)) = 0"
+        using term_value_zero[OF q_perm False] by simp
+      then have "sign q * (\<Prod>k=0..<n. D_entry k (q k)) = 0"
+        by simp
+      then show ?thesis
+        using term_value_zero[OF q_perm False]
+        by (metis dvd_0_right)
+    next
+      case True
+      have "matching_weight q > matching_weight p_min"
+        using True q_neq p_min_unique `q \<in> S - {p_min}` by auto
+      then have power_dvd: "(2::int) ^ (matching_weight p_min + 1) dvd (2::int) ^ matching_weight q"
+        by (metis le_imp_power_dvd less_iff_succ_less_eq)
+      have term_abs: "abs (\<Prod>i=0..<n. D_entry i (q i)) = (2::int) ^ matching_weight q"
+        using term_value_non_zero[OF q_perm True] by simp
+      have abs_with_sign: "abs (sign q * (\<Prod>i=0..<n. D_entry i (q i))) = (2::int) ^ matching_weight q"
+        using term_abs by (simp add: abs_mult)
+      show ?thesis
+        using power_dvd abs_with_sign
+        by (metis dvd_abs_iff)
+    qed
+  qed
+
+  show "multiplicity 2 (\<Sum>p \<in> S. ?term p) = matching_weight p_min"
+    unfolding split_sum
+  proof (rule multiplicity_eqI)
+    show "(2::int) ^ matching_weight p_min dvd ?A + ?B"
+    proof -
+      have "(2::int) ^ matching_weight p_min dvd ?A"
+        using val_A multiplicity_dvd by metis
+      moreover have "(2::int) ^ matching_weight p_min dvd ?B"
+        using dvd_B by (meson dvd_trans le_add1 power_le_dvd)
+      ultimately show ?thesis
+        by (rule dvd_add)
+    qed
+
+  next
+    show "\<not> (2::int) ^ (Suc (matching_weight p_min)) dvd ?A + ?B"
+    proof 
+      assume asm : "(2::int) ^ (Suc (matching_weight p_min)) dvd ?A + ?B"
+
+      have "(2::int) ^ (matching_weight p_min + 1) dvd ?B"
+        using dvd_B by blast
+
+      then have "(2::int) ^ (matching_weight p_min + 1) dvd ?A"
+        using asm dvd_add_left_iff by auto
+
+      have "p_min permutes {0..<n}" using S_permutes assms(2) by auto
+      then have "?A \<noteq> 0" using p_min_pm term_value_non_zero
+        by (smt (verit, del_insts) no_zero_divisors not_exp_less_eq_0_int
+            prod.cong sign_nz)
+
+      show False
+        using multiplicity_2_not_dvd_Suc[OF val_A] `?A \<noteq> 0` `(2::int) ^ (matching_weight p_min + 1) dvd ?A`
+        by simp
+    qed
+  qed
+  show "(\<Sum>p \<in> S. ?term p) \<noteq> 0"
+  proof -
+    have "\<not> (2::int) ^ (matching_weight p_min + 1) dvd (\<Sum>p \<in> S. ?term p)"
+      unfolding split_sum
+    proof
+      assume "(2::int) ^ (matching_weight p_min + 1) dvd ?A + ?B"
+      then have "(2::int) ^ (matching_weight p_min + 1) dvd ?A"
+        using dvd_B dvd_add_left_iff by blast
+
+      have "p_min permutes {0..<n}" using S_permutes assms(2) by auto
+      then have "?A \<noteq> 0" using p_min_pm term_value_non_zero
+        by (smt (verit, del_insts) no_zero_divisors not_exp_less_eq_0_int
+            prod.cong sign_nz)
+
+      show False
+      using multiplicity_2_not_dvd_Suc[OF val_A] `?A \<noteq> 0`  `(2::int) ^ (matching_weight p_min + 1) dvd ?A`
+      by simp
+    qed
+    then show ?thesis by auto
+  qed
+qed
+
 lemma unique_det_power_of_weight:
   assumes "unique_min_weight_condition"
   shows "multiplicity 2 det_D = min_weight_val"
@@ -123,74 +233,20 @@ proof -
     "\<forall>q. is_perfect_matching q \<and> matching_weight q = min_weight_val \<longrightarrow> q = p_min"
     using assms unique_min_weight_condition_def by blast 
 
-  let ?term = "\<lambda>p. sign p * (\<Prod>i = 0..<n. D_entry i (p i))"
-  have split_sum : "det_D = ?term p_min + 
-                            (\<Sum>p \<in> {p. p permutes {0..<n}} - {p_min}. ?term p)"
-    unfolding det_D_def
-    using p_props(1) is_perfect_matching_def
-    by (simp add: sum_diff1 finite_permutations)
-
-  have val_p_min: "multiplicity 2 (?term p_min) = min_weight_val"
-    using p_props(1,2) term_value_non_zero is_perfect_matching_def multiplicity_2_abs
-    by (auto simp: abs_mult)
-
-  have dvd_rest: "2 ^ (min_weight_val + 1) dvd (\<Sum>p \<in> {p. p permutes {0..<n}} - {p_min}. sign p * (\<Prod>i = 0..<n. D_entry i (p i)))"
-  proof (rule dvd_sum)
-    fix q assume "q \<in> {p. p permutes {0..<n}} - {p_min}"
-    then have q_perm: "q permutes {0..<n}" and q_neq: "q \<noteq> p_min" by auto
-
-    show "(2::int) ^ (min_weight_val + 1) dvd ?term q"
-    proof (cases "is_perfect_matching q")
-      case False
-      then show ?thesis using term_value_zero[OF q_perm]
-        by (metis arith_simps(63) dvd_0_right)
-    next
-      case True
-      have "matching_weight q > min_weight_val"
-        using True q_neq p_props(3) minimum_weight by fastforce
-      then have "(2::int) ^ (min_weight_val + 1) dvd (2::int) ^ matching_weight q"
-        using interval_class.less_imp_in_less_eq le_imp_power_dvd
-        by blast
-      then show ?thesis
-        using term_value_non_zero[OF q_perm True]
-        by (metis abs_sign dvd_abs_iff idom_class.dvd_mult_unit_iff'
-            zdvd1_eq)
-    qed
-  qed
-  show ?thesis
-  proof (rule multiplicity_eqI)
-    let ?A = "?term p_min"
-    let ?B = "\<Sum>p \<in> {p. p permutes {0..<n}} - {p_min}. ?term p"
-
-    show "(2::int) ^ min_weight_val dvd det_D"
-    proof -
-      have "(2::int) ^ min_weight_val dvd?A"
-        using val_p_min multiplicity_dvd by metis
-      moreover have "(2::int) ^ min_weight_val dvd ?B"
-        using dvd_rest power_le_dvd le_add1 by blast
-      ultimately show ?thesis
-        using split_sum by simp
-    qed
-  next
-    show "\<not> (2::int) ^ (Suc min_weight_val) dvd det_D"
-    proof
-      let ?A = "?term p_min"
-      let ?B = "\<Sum>p \<in> {p. p permutes {0..<n}} - {p_min}. ?term p"
-
-      assume "(2::int) ^ (Suc min_weight_val) dvd det_D"
-      then have "(2::int) ^ (min_weight_val + 1) dvd ?A + ?B"
-        using split_sum by simp
-      then have "(2::int) ^ (min_weight_val + 1) dvd ?A"
-        using dvd_rest dvd_add_left_iff by blast
-      moreover have "?A \<noteq> 0"
-        using p_props(1) term_value_non_zero is_perfect_matching_def
-        by (metis abs_0 no_zero_divisors power_eq_0_iff rel_simps(28,46)
-            sign_nz)
-
-      ultimately show False
-        using multiplicity_2_not_dvd_Suc[OF val_p_min] by auto
-    qed
-  qed
+  let ?S = "{p. p permutes {0..<n}}"
+  
+    have "finite ?S" by (simp add: finite_permutations)
+    have "p_min \<in> ?S" using p_props(1) is_perfect_matching_def by simp
+    
+    have unique_in_S: "\<forall>q \<in> ?S - {p_min}. is_perfect_matching q \<longrightarrow> matching_weight q > matching_weight p_min"
+      using p_props minimum_weight
+      by (metis Diff_iff basic_trans_rules(17) insertI1)
+    have "multiplicity 2 (\<Sum>p \<in> ?S. sign p * (\<Prod>k=0..<n. D_entry k (p k))) = matching_weight p_min"
+      apply (rule unique_subset_sum_power_of_weight[of ?S p_min])
+      using `finite ?S` `p_min \<in> ?S` p_props(1) unique_in_S by auto
+  
+    then show ?thesis
+      unfolding det_D_def p_props(2) by simp
 qed
 
 
@@ -230,135 +286,15 @@ definition cofactor_sum :: "nat \<Rightarrow> nat \<Rightarrow> int" where
 lemma minor_sum_decomposition:
   assumes "i<n" "j<n" "(i,j) \<in> E"
   shows "minor_sum i j = D_entry i j * cofactor_sum i j"
-proof - 
-  have  "minor_sum i j = (\<Sum>p \<in> matching_with_edge i j. sign p * (\<Prod>k = 0..<n. D_entry k (p k)))"
-    unfolding minor_sum_def by auto
+  unfolding minor_sum_def cofactor_sum_def
+  apply (subst sum_distrib_left)
+  apply (rule sum.cong, simp)
+  using assms(1)
+  apply (auto simp: matching_with_edge_def)
+  apply (subst prod.remove[where x = i])
+    apply simp
+  by (auto simp: mult.assoc mult.left_commute)
 
-  also have "... = (\<Sum>p \<in> matching_with_edge i j. D_entry i j *( sign p * (\<Prod>k \<in> {0..<n} - {i}. D_entry k (p k))))"
-  proof (rule sum.cong)
-    show "matching_with_edge i j = matching_with_edge i j" by simp
-    fix p assume "p \<in> matching_with_edge i j"
-    hence "p i = j" unfolding matching_with_edge_def by simp
-
-    have "(\<Prod>k = 0..<n. D_entry k (p k)) = D_entry i (p i) * (\<Prod>k \<in> {0..<n} - {i}. D_entry k (p k))"
-      apply (rule prod.remove)
-      apply simp
-      by (simp add: assms(1))
-
-    hence "(\<Prod>k = 0..<n. D_entry k (p k)) = D_entry i j * (\<Prod>k \<in> {0..<n} - {i}. D_entry k (p k))"
-      using \<open>p i = j\<close> by presburger
-
-    thus "sign p * (\<Prod>k = 0..<n. D_entry k (p k)) = D_entry i j *(sign p * (\<Prod>k \<in> {0..<n} - {i}. D_entry k (p k)))"
-      by simp 
-  qed
-
-  also have "... =  D_entry i j * (\<Sum>p \<in> matching_with_edge i j.(sign p * (\<Prod>k \<in> {0..<n} - {i}. D_entry k (p k))))"
-    by (simp add: sum_distrib_left)
-
-  also have "... = D_entry i j * cofactor_sum i j"
-    unfolding cofactor_sum_def by simp
-
-  finally show ?thesis .
-qed
-
-
-
-
-
-lemma unique_subset_sum_power_of_weight:
-  fixes S :: "(nat \<Rightarrow> nat) set"
-  assumes "finite S"
-  assumes "p_min \<in> S"
-  assumes p_min_pm: "is_perfect_matching p_min"
-  assumes p_min_unique: "\<forall>q \<in> S - {p_min}. is_perfect_matching q \<longrightarrow> matching_weight q > matching_weight p_min"
-  assumes S_permutes: "\<forall>p \<in> S. p permutes {0..<n}"
-  shows sum_nonzero: "(\<Sum>p \<in> S. sign p * (\<Prod>k=0..<n. D_entry k (p k))) \<noteq> 0"
-    and sum_multiplicity: "multiplicity 2 (\<Sum>p \<in> S. sign p * (\<Prod>k=0..<n. D_entry k (p k))) = matching_weight p_min"
-proof -
-  let ?w_min = "matching_weight p_min"
-  let ?term = "\<lambda>p. sign p * (\<Prod>i = 0..<n. D_entry i(p i))"
-
-  have sum_split: "(\<Sum>p \<in> S. ?term p) = ?term p_min + (\<Sum>p \<in> S - {p_min}. ?term p)"
-    by (metis (mono_tags, lifting) assms(1,2) insert_absorb sum.insert_remove)
-
-  have val_p_min: "multiplicity 2 (?term p_min) = ?w_min"
-  proof -
-    have "abs (?term p_min) = (2::int) ^ ?w_min"
-    proof -
-      have "p_min permutes {0..<n}"
-        using assms(3) is_perfect_matching_def by blast
-      thus ?thesis
-        by (metis (lifting) abs_mult abs_zmult_eq_1 arith_simps(43) assms(3)
-            bipartite_graph.term_value_non_zero mult_1s(1,2) mult_left_cancel
-            pos_zmult_eq_1_iff sign_left_idempotent sign_nz zabs_less_one_iff)
-    qed
-    thus ?thesis using multiplicity_2_abs by blast
-  qed
-
-  have term_p_min_nonzero: "?term p_min \<noteq> 0"
-  proof -
-    have "p_min permutes {0..<n}" using p_min_pm is_perfect_matching_def by simp
-    have "abs (?term p_min) = (2::int) ^ ?w_min"
-      using p_min_pm term_value_non_zero abs_mult abs_sign mult_1
-      by (metis \<open>p_min permutes {0..<n}\<close>)
-    then have "abs (?term p_min) > 0" by simp
-    thus ?thesis by simp
-  qed
-
-  have rest_divisible: "(2::int)^(?w_min + 1) dvd (\<Sum>p \<in> S - {p_min}. ?term p)"
-  proof (rule dvd_sum)
-    fix q assume q_in_rest: "q \<in> S - {p_min}"
-    have "q \<in> S" using q_in_rest by blast
-    show "(2::int) ^ (?w_min +1) dvd ?term q"
-    proof (cases "is_perfect_matching q")
-      case False
-      have "q permutes {0..<n}" by (simp add: \<open>q \<in> S\<close> assms(5))
-      then have "?term q = 0" by (simp add: False term_value_zero)
-      then show ?thesis
-        by (smt (verit, ccfv_threshold) even_zero mult_delta_right
-            multiplicity_2_abs multiplicity_decomposeI multiplicity_zero
-            odd_one power_0)
-    next
-      case True
-      have "matching_weight q > ?w_min" using True p_min_unique q_in_rest by blast
-      then have w_ge: "matching_weight q \<ge> ?w_min + 1" by simp
-      have "q permutes {0..<n}" by (simp add: \<open>q \<in> S\<close> assms(5))
-      then have "abs(?term q) = (2::int) ^ (matching_weight q)"
-        using True term_value_non_zero abs_mult abs_sign mult_1 by metis
-      then have "(2::int) ^ (matching_weight q) dvd ?term q"
-        by (metis multiplicity_2_abs multiplicity_dvd)
-      moreover have "(2::int) ^ (?w_min + 1) dvd (2::int) ^ (matching_weight q)"
-        using le_imp_power_dvd w_ge by blast
-      ultimately show ?thesis using dvd_trans by blast
-    qed
-  qed
-
-  have not_dvd_sum: "\<not> (2::int)^(Suc ?w_min) dvd (\<Sum>p \<in> S. ?term p)"
-  proof -
-    have "\<not> (2::int) ^ (?w_min + 1) dvd ?term p_min"
-      using multiplicity_2_not_dvd_Suc val_p_min term_p_min_nonzero by blast
-    then show ?thesis
-      unfolding sum_split using rest_divisible dvd_add_left_iff by auto
-  qed
-
-  show "(\<Sum>p \<in> S. ?term p) \<noteq> 0"
-    using not_dvd_sum by auto
-
-  show "multiplicity 2 (\<Sum>p \<in> S. ?term p) = ?w_min"
-  proof (rule multiplicity_eqI)
-    show "(2::int) ^ ?w_min dvd (\<Sum>p \<in> S. ?term p)"
-    proof -
-      have "(2::int) ^ ?w_min dvd ?term p_min" by (metis multiplicity_dvd val_p_min)
-      moreover have "(2::int) ^ ?w_min dvd (\<Sum>p \<in> S - {p_min}. ?term p)"
-        using rest_divisible power_le_dvd le_add1 by blast
-      ultimately show ?thesis 
-        using sum_split by (metis (no_types, lifting) dvd_add)
-    qed
-  next
-    show "\<not> (2::int) ^(Suc ?w_min) dvd (\<Sum>p \<in> S. ?term p)"
-      using not_dvd_sum by simp
-  qed
-qed
 
 lemma sum_eq_implies_correct_edge:
   fixes p_min :: "nat \<Rightarrow> nat" and i j :: nat
@@ -379,112 +315,79 @@ proof (rule ccontr)
   assume neq: "p_min i \<noteq> j"
   let ?S = "matching_with_edge i j"
 
-  have S_nonempty: "?S \<noteq> {}"
-  proof -
-    have "minor_sum i j = D_entry i j * cofactor_sum i j"
-      by (simp add: assms(4,5,6) minor_sum_decomposition)
-    then have "minor_sum i j \<noteq> 0"
-      using cofactor_nz unfolding D_entry_def using edge_exists by simp
-    then show ?thesis unfolding minor_sum_def by auto
+  have all_heavy: "\<forall>q \<in> ?S. matching_weight q > min_weight_val"
+  proof
+    fix q assume "q \<in> ?S"
+    then have "is_perfect_matching q" and "q i = j" 
+      using matching_with_edge_def by auto
+    then have "q \<noteq> p_min" using neq by auto 
+    show "matching_weight q > min_weight_val"
+      using p_min_unique `q \<noteq> p_min` `is_perfect_matching q` minimum_weight 
+      by (metis antisym_conv linorder_not_le)
   qed
 
-  have S_finite: "finite ?S"
-    by (simp add: bipartite_graph.finite_perfect_matchings
-        matching_with_edge_def)
-
-  obtain q_best where q_best_props:
-    "q_best \<in> ?S"
-    "\<forall>q \<in> ?S. matching_weight q \<ge> matching_weight q_best"
+  have val_ge_min_plus_1: "multiplicity 2 (minor_sum i j) \<ge> min_weight_val + 1"
   proof -
-    let ?W = "matching_weight ` ?S"
-    have "finite ?W" by (simp add: S_finite)
-    moreover have "?W \<noteq> {}" using S_nonempty by simp
-    ultimately have "Min ?W \<in> ?W" by (rule Min_in)
+    have "(2::int) ^ (min_weight_val + 1) dvd minor_sum i j"
+      unfolding minor_sum_def
+    proof (rule dvd_sum)
+      fix q assume "q \<in> ?S"
+      then have q_perm: "q permutes {0..<n}" 
+        using matching_with_edge_def is_perfect_matching_def by auto
+      have "matching_weight q \<ge> min_weight_val + 1"
+        using all_heavy `q \<in> ?S`
+        by (simp add: less_iff_succ_less_eq)
+     show "(2::int) ^ (min_weight_val + 1) dvd sign q * (\<Prod>k=0..<n. D_entry k (q k))"
+      proof -
+        have q_pm: "is_perfect_matching q" 
+          using `q \<in> ?S` matching_with_edge_def by simp
+        have "matching_weight q \<ge> min_weight_val + 1"
+          using all_heavy `q \<in> ?S` by auto
+        then have power_dvd: "(2::int) ^ (min_weight_val + 1) dvd (2::int) ^ matching_weight q"
+          using le_imp_power_dvd by blast
 
-    then obtain q where q_def: "q \<in> ?S" "matching_weight q = Min ?W" by auto
+        have abs_prod: "abs (\<Prod>k=0..<n. D_entry k (q k)) = (2::int) ^ matching_weight q"
+          using term_value_non_zero[OF q_perm q_pm] by simp
 
-    have "\<forall> z \<in> ?S. matching_weight z \<ge> matching_weight q"
-      using \<open>finite (matching_weight ` matching_with_edge i j)\<close> q_def(2)
-      by force
-
-    then show ?thesis using q_def(1) that by blast
-  qed
-
-  have weight_ge: "matching_weight q_best > min_weight_val"
-  proof -
-    have "p_min \<notin> ?S"
-      by (simp add: matching_with_edge_def neq)
-    have "is_perfect_matching q_best"
-      using matching_with_edge_def q_best_props(1) by auto
-    have "matching_weight q_best \<ge> min_weight_val"
-      by (simp add: \<open>is_perfect_matching q_best\<close> minimum_weight)
-    moreover have "matching_weight q_best \<noteq> min_weight_val"
-      using \<open>p_min \<notin> matching_with_edge i j\<close> assms(3)
-        matching_with_edge_def q_best_props(1) by blast
-    ultimately show ?thesis by simp
-  qed
-
-  have div_by_q_best: "(2::int) ^ matching_weight q_best dvd minor_sum i j"
-  proof -
-    have "\<forall> p \<in> ?S. (2::int) ^ matching_weight q_best dvd (sign p * (\<Prod>k=0..<n. D_entry k (p k)))"
-    proof
-      fix p assume "p \<in> ?S"
-      then have p_pm: "is_perfect_matching p"
-        by (simp add: matching_with_edge_def)
-
-      have p_perm: "p permutes {0..<n}"
-        using p_pm is_perfect_matching_def by simp
-
-      have w_ge: "matching_weight p \<ge> matching_weight q_best"
-        using \<open>p \<in> matching_with_edge i j\<close> q_best_props(2) by blast
-
-      have "abs (sign p * (\<Prod>k=0..<n. D_entry k (p k))) = (2::int) ^ matching_weight p"
-        using p_pm p_perm
-        by (simp add: abs_mult bipartite_graph.term_value_non_zero) 
-
-      then have "(2::int) ^ matching_weight p dvd (sign p *(\<Prod>k=0..<n. D_entry k (p k)))"
-        by (simp add: multiplicity_2_abs multiplicity_dvd')
-
-      then show "(2::int) ^ matching_weight q_best dvd (sign p * (\<Prod>k=0..<n. D_entry k (p k)))"
-        using power_le_dvd w_ge by blast
+        have abs_total: "abs (sign q * (\<Prod>k=0..<n. D_entry k (q k))) = (2::int) ^ matching_weight q"
+          using abs_prod by (simp add: abs_mult)
+        show ?thesis
+        apply (subst dvd_abs_iff[symmetric])
+        apply (subst abs_total)
+        apply (rule power_dvd)
+        done
+      qed
     qed
-    then show ?thesis
-      by (simp add: dvd_sum minor_sum_def) 
-  qed
-
-
-  have val_ge_best: "multiplicity 2 (minor_sum i j) \<ge> matching_weight q_best"
-  proof -
-    have "minor_sum i j = D_entry i j * cofactor_sum i j"
-      by (simp add: assms(4,5,6) minor_sum_decomposition)
-    then have nz: "minor_sum i j \<noteq> 0"
-      using cofactor_nz edge_exists unfolding D_entry_def by simp
-    show ?thesis
-      by (simp add: div_by_q_best multiplicity_geI nz)
+    moreover have "minor_sum i j \<noteq> 0"
+      using assms(4,5,6) minor_sum_decomposition cofactor_nz edge_exists D_entry_def by auto
+    ultimately show ?thesis
+      using multiplicity_geI odd_Numeral1 by blast
   qed
 
   have val_is_min: "multiplicity 2 (minor_sum i j) = min_weight_val"
   proof -
-    have split: "minor_sum i j = D_entry i j * cofactor_sum i j"
-      by (simp add: assms(4,5,6) minor_sum_decomposition)
+    have "minor_sum i j = D_entry i j * cofactor_sum i j"
+      using assms(4,5,6) minor_sum_decomposition by simp
 
-    have D_entry_nz: "D_entry i j \<noteq> 0" unfolding D_entry_def
-      using assms(4) by auto
+    have D_nz: "D_entry i j \<noteq> 0"
+      unfolding D_entry_def
+      by (simp add: assms(4))
 
-    have "multiplicity 2 (minor_sum i j) = multiplicity 2 (D_entry i j) + multiplicity 2 (cofactor_sum i j)" 
-      unfolding split
-      using D_entry_nz cofactor_nz 
+    have split_eq: "minor_sum i j = D_entry i j * cofactor_sum i j"
+      using assms(4,5,6) minor_sum_decomposition by simp
+    
+    then have "multiplicity 2 (minor_sum i j) = multiplicity 2 (D_entry i j) + multiplicity 2 (cofactor_sum i j)"
+      using D_nz cofactor_nz
       by (simp add: prime_elem_multiplicity_mult_distrib)
-
+      
     also have "... = w i j + multiplicity 2 (cofactor_sum i j)"
       by (simp add: D_entry_def assms(4))
-
+      
     finally show ?thesis
-      by (simp add: assms(7))
+      using sum_eq by simp
   qed
-
   show False
-    using val_ge_best val_is_min weight_ge by linarith
+    using val_ge_min_plus_1 val_is_min by linarith
 qed
 
 
@@ -503,6 +406,7 @@ lemma correct_edge_implies_sum_eq:
   shows "w i j + multiplicity 2 (cofactor_sum i j) = min_weight_val"
 proof -
   let ?S = "matching_with_edge i j"
+
   have p_in_S : "p_min \<in> ?S"
     by (simp add: assms(1,7) matching_with_edge_def)
 
@@ -517,37 +421,18 @@ proof -
     by (simp add: bipartite_graph.is_perfect_matching_def
         matching_with_edge_def)
 
+  note sum_weight = unique_subset_sum_power_of_weight[OF S_finite p_in_S p_min_def(1) unique_in_S S_permutes]
+
   have val_minor: "multiplicity 2 (minor_sum i j) = min_weight_val"
-  proof -
-    have "minor_sum i j = (\<Sum>p \<in> ?S. sign p * (\<Prod>k = 0..<n. D_entry k (p k)))"
-      unfolding minor_sum_def by simp
-    also have "multiplicity 2 ... = matching_weight p_min"
-      by (rule unique_subset_sum_power_of_weight[OF S_finite p_in_S p_min_def(1) unique_in_S S_permutes])
-    finally show ?thesis
-      by (simp add: assms(2)) 
-  qed
+    using sum_weight(2) by (simp add: assms(2) minor_sum_def) 
 
-  have split_eq: "minor_sum i j = D_entry i j * cofactor_sum i j"
-    by (simp add: assms(4,5,6) minor_sum_decomposition)
-
-  have minor_notzero: "minor_sum i j \<noteq> 0"
-  proof -
-    have "(\<Sum>p \<in> ?S. sign p * (\<Prod>k=0..<n. D_entry k (p k))) \<noteq> 0"
-      using unique_subset_sum_power_of_weight(1)[OF S_finite p_in_S p_min_def(1) unique_in_S S_permutes] 
-      by simp
-
-    then show ?thesis
-      unfolding minor_sum_def by simp
-  qed
-
-  have val_entry: "multiplicity 2 (D_entry i j) = w i j"
-    by (simp add: assms(4) bipartite_graph.D_entry_def)
+  have minor_nz: "minor_sum i j \<noteq> 0"
+    using sum_weight(1) using minor_sum_def by presburger 
 
   show ?thesis
-    using val_minor split_eq val_entry minor_notzero
+    using val_minor minor_nz assms(4,5,6) minor_sum_decomposition D_entry_def
     by (simp add: prime_elem_multiplicity_mult_distrib)
 qed
-
 
 
 theorem edge_test_iff_correct:
@@ -562,21 +447,16 @@ theorem edge_test_iff_correct:
   shows "p_min i = j \<longleftrightarrow> (cofactor_sum i j \<noteq> 0 \<and> w i j + multiplicity 2 (cofactor_sum i j) = min_weight_val)"
 
 proof (rule iffI)
-  assume "cofactor_sum i j \<noteq> 0 \<and> w i j + multiplicity 2 (cofactor_sum i j) = min_weight_val"
-  then have nz: "cofactor_sum i j \<noteq> 0" and eq: "w i j + multiplicity 2 (cofactor_sum i j) = min_weight_val"
-    by auto
+  assume rhs:  "cofactor_sum i j \<noteq> 0 \<and> w i j + multiplicity 2 (cofactor_sum i j) = min_weight_val"
   show "p_min i = j"
-    using sum_eq_implies_correct_edge
-    using
-      \<open>cofactor_sum i j \<noteq> 0 \<and> w i j + multiplicity 2 (cofactor_sum i j) = min_weight_val\<close>
-      assms(1,2,3,4,5,6) by blast
+    using sum_eq_implies_correct_edge[OF p_min_def p_min_unique edge_exists i_valid j_valid] rhs
+    by blast
 
 next
-  assume "p_min i = j"
+  assume lhs: "p_min i = j"
   have eq: "w i j + multiplicity 2 (cofactor_sum i j) = min_weight_val"
-    using \<open>p_min i = j\<close> assms(2,4,5,6)
-      bipartite_graph.correct_edge_implies_sum_eq p_min_def(1)
-      p_min_unique by blast
+    using correct_edge_implies_sum_eq[OF p_min_def p_min_unique edge_exists i_valid j_valid lhs] by simp
+
   have nz: "cofactor_sum i j \<noteq> 0"
   proof -
     let ?S = "matching_with_edge i j"
@@ -603,8 +483,7 @@ next
     then have "minor_sum i j \<noteq> 0" unfolding minor_sum_def .
 
     then show ?thesis
-      by (simp add: assms(4,5,6)
-          bipartite_graph.minor_sum_decomposition)
+      using i_valid j_valid edge_exists minor_sum_decomposition D_entry_def by auto
   qed
   show "cofactor_sum i j \<noteq> 0 \<and> w i j + multiplicity 2 (cofactor_sum i j) = min_weight_val"
     using eq nz by simp
@@ -638,26 +517,28 @@ lemma matching_to_set_inj:
   assumes "p permutes {0..<n}" "q permutes {0..<n}"
   assumes "matching_to_set n p = matching_to_set n q"
   shows "p = q"
-proof -
-  have "\<forall> i < n. p i = q i"
-  proof (intro allI impI)
-    fix i assume "i < n"
-    have "(i, p i) \<in> matching_to_set n p"
-      using `i < n` matching_to_set_def by auto
-
+proof (rule ext)
+  fix i
+  show "p i = q i"
+  proof (cases "i < n")
+    case True
+    then have "(i,p i) \<in> matching_to_set n p"
+      unfolding matching_to_set_def by auto
     then have "(i,p i) \<in> matching_to_set n q"
       using assms(3) by simp
-
-    then show "p i = q i"
-      using matching_to_set_def `i < n` by auto
-
+    then show ?thesis
+      unfolding matching_to_set_def using True by auto
+  next
+    case False
+    then have "p i = i" and "q i = i"
+      using assms(1,2) permutes_not_in by fastforce+
+    then show ?thesis by simp
   qed
-  then show "p = q"
-    by (metis (no_types, lifting) ext assms(1,2) atLeastLessThan_iff
-        permutes_not_in)
 qed
 
+
 lemma weight_equivalence:
+  fixes w_func :: "nat \<times> nat \<Rightarrow> nat"
   assumes "p permutes {0..<n}"
   shows "wt w_func (matching_to_set n p) = bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) p"
 proof -
@@ -667,18 +548,10 @@ proof -
   have set_is_image: "matching_to_set n p = (\<lambda>i. (i, p i)) ` {0..<n}"
     unfolding matching_to_set_def image_def by auto
 
-  have "wt w_func (matching_to_set n p) = (\<Sum>e \<in> (matching_to_set n p). w_func e)"
-    unfolding wt_def ..
-    
-  also have "... = (\<Sum>i \<in> {0..<n}. w_func (i, p i))"
-    unfolding matching_to_set_def
-    using sum.reindex[OF inj_proof]
-    using matching_to_set_def set_is_image by auto 
-
-  also have "... = bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) p"
-    unfolding bipartite_graph.matching_weight_def by simp
-
-  finally show ?thesis by simp
+  show ?thesis
+    unfolding wt_def set_is_image
+    using bipartite_graph.matching_weight_def inj_proof sum.reindex_cong
+    by fastforce
 qed
 
 
@@ -688,6 +561,11 @@ lemma pm_iso_equivalence:
   shows "bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w_func(u,v)) E \<longleftrightarrow> has_unique_minimizer (perfect_matching_family n E) w_func"
 
 proof -
+  let ?w_M = "bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v))"
+  let ?min_w = "bipartite_graph.min_weight_val n (\<lambda>u v. w_func(u,v)) E"
+  let ?is_pm = "bipartite_graph.is_perfect_matching n E"
+
+
   let ?Graph_Cond = "bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w_func(u,v)) E"
   let ?F = "perfect_matching_family n E"
   let ?Set_Cond = "has_unique_minimizer (perfect_matching_family n E) w_func"
@@ -697,10 +575,7 @@ proof -
     assume ?Graph_Cond
 
     obtain p where p_unique:
-      "bipartite_graph.is_perfect_matching n E p"
-      "bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) p = bipartite_graph.min_weight_val n (\<lambda>u v. w_func(u,v)) E"
-      "\<forall>q. bipartite_graph.is_perfect_matching n E q \<and> 
-           bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) q = bipartite_graph.min_weight_val n (\<lambda>u v. w_func(u,v)) E \<longrightarrow> q = p"
+      "?is_pm p" "?w_M p = ?min_w" "\<forall>q. ?is_pm q \<and> ?w_M q = ?min_w \<longrightarrow> q = p"
       using `?Graph_Cond` unfolding bipartite_graph.unique_min_weight_condition_def
       by auto
 
@@ -732,7 +607,8 @@ proof -
         finally show "wt w_func ?S_p \<le> wt w_func S" .
         qed
       qed
-      have "\<forall>S \<in> ?F. minimizer ?F w_func S \<longrightarrow> S = ?S_p"
+
+      have unique_min: "\<forall>S \<in> ?F. minimizer ?F w_func S \<longrightarrow> S = ?S_p"
       proof (intro ballI impI)
         fix S assume "S \<in> ?F" "minimizer ?F w_func S"
         then obtain q where q_def: "S = matching_to_set n q" "bipartite_graph.is_perfect_matching n E q"
@@ -755,97 +631,83 @@ proof -
     show ?Set_Cond
       unfolding has_unique_minimizer_def
       using
-        \<open>\<forall>S\<in>perfect_matching_family n E. minimizer (perfect_matching_family n E) w_func S \<longrightarrow> S = matching_to_set n p\<close>
-        is_min minimizer_def by blast 
+        unique_min is_min minimizer_def by blast 
+
   next
     assume ?Set_Cond
 
-    obtain S where S_unique: "minimizer ?F w_func S" "\<forall>S' \<in> ?F. minimizer ?F w_func S' \<longrightarrow> S' = S"
-      using `?Set_Cond` has_unique_minimizer_def
-      by metis
+    then obtain S where S_unique: "minimizer ?F w_func S" "\<forall>S' \<in> ?F. minimizer ?F w_func S' \<longrightarrow> S' = S"
+      unfolding has_unique_minimizer_def by blast
 
-    obtain p where p_def: "S = matching_to_set n p" "bipartite_graph.is_perfect_matching n E p"
-      using S_unique(1) minimizer_def perfect_matching_family_def bipartite_graph.is_perfect_matching_def
-      by (smt (verit, del_insts) mem_Collect_eq)
+    obtain p where p_def: "S = matching_to_set n p" "?is_pm p"
+      using S_unique(1) unfolding minimizer_def perfect_matching_family_def bipartite_graph.is_perfect_matching_def
+      by blast
 
     show ?Graph_Cond
       unfolding bipartite_graph.unique_min_weight_condition_def
     proof (intro ex1I conjI)
-      show "bipartite_graph.is_perfect_matching n E p" using p_def(2) .
+      show "?is_pm p" using p_def(2) .
 
-      show "bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) p = bipartite_graph.min_weight_val n (\<lambda>u v. w_func(u,v)) E"
+      show "?w_M p = ?min_w"
       proof -
-        let ?Weights = "{bipartite_graph.matching_weight n (\<lambda>u v. w_func (u, v)) q |q. bipartite_graph.is_perfect_matching n E q}"
+        let ?Weights = "{?w_M q |q. ?is_pm q}"
 
         have "finite ?Weights"
           using bipartite_graph.finite_perfect_matchings by auto
 
-        have p_in_weights: "bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) p \<in> ?Weights"
+        have p_in_weights: "?w_M p \<in> ?Weights"
           using p_def(2) by auto
 
-        have p_min: "\<forall>y \<in> ?Weights. bipartite_graph.matching_weight n (\<lambda>u v. w_func(u, v)) p \<le> y"
+        have p_min: "\<forall>y \<in> ?Weights. ?w_M p \<le> y"
         proof
           fix y assume "y \<in> ?Weights"
-          then obtain q where q_info: "y = bipartite_graph.matching_weight n (\<lambda>u v. w_func(u, v)) q" " bipartite_graph.is_perfect_matching n E q"
-            by auto
+          then obtain q where q_def: "y = ?w_M q" "?is_pm q" by auto
 
           let ?S_q = "matching_to_set n q"
 
-          have Sq_in_family: "?S_q \<in> perfect_matching_family n E"
+          have Sq_in_family: "?S_q \<in> ?F"
             using bipartite_graph.is_perfect_matching_def
-              perfect_matching_family_def q_info(2) by auto
+              perfect_matching_family_def q_def(2) by auto
 
           have "wt w_func S \<le> wt w_func ?S_q"
             using S_unique(1) Sq_in_family minimizer_def by auto
         
-          then show "bipartite_graph.matching_weight n (\<lambda>u v. w_func (u,v)) p \<le> y"
-            by (metis bipartite_graph.is_perfect_matching_def
-                bipartite_graph.weight_equivalence p_def(1,2) q_info(1,2))
+          then show "?w_M p \<le> y"
+            using weight_equivalence p_def q_def
+            unfolding bipartite_graph.is_perfect_matching_def
+            by force
         qed
-        have "bipartite_graph.matching_weight n (\<lambda>u v. w_func (u,v)) p = Min ?Weights"
+        then show ?thesis 
+          unfolding bipartite_graph.min_weight_val_def
+          using bipartite_graph.finite_perfect_matchings[of n E] p_in_weights
           by (metis (no_types, lifting) Min_eqI
-              \<open>finite {bipartite_graph.matching_weight n (\<lambda>u v. w_func (u, v)) q |q. is_perfect_matching q}\<close>
-              p_in_weights p_min)
-        then show ?thesis
-            using
-              \<open>bipartite_graph.matching_weight n (\<lambda>u v. w_func (u, v)) p = Min {bipartite_graph.matching_weight n (\<lambda>u v. w_func (u, v)) q |q. is_perfect_matching q}\<close>
-              bipartite_graph.min_weight_val_def by auto 
+              \<open>finite {bipartite_graph.matching_weight n (\<lambda>u v. w_func (u, v)) q |q. is_perfect_matching q}\<close>)
         qed
 
-        fix q assume q_asm: "bipartite_graph.is_perfect_matching n E q \<and> 
-                           bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) q = bipartite_graph.min_weight_val n (\<lambda>u v. w_func(u,v)) E"
+        fix q assume q_asm: "?is_pm q \<and> ?w_M q = ?min_w"
 
         let ?S_q = "matching_to_set n q"
 
+        have "?S_q \<in> ?F" using q_asm unfolding perfect_matching_family_def bipartite_graph.is_perfect_matching_def by auto
+
         have "wt w_func ?S_q = wt w_func S"
         proof -
-          have Sq_eq_q: "wt w_func ?S_q = bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) q"
+          have Sq_eq_q: "wt w_func ?S_q = ?w_M q"
             using bipartite_graph.is_perfect_matching_def q_asm
               weight_equivalence by blast
-          also have "... = bipartite_graph.matching_weight n (\<lambda>u v. w_func(u,v)) p"
-            using
-              \<open>bipartite_graph.matching_weight n (\<lambda>u v. w_func (u, v)) p = bipartite_graph.min_weight_val n (\<lambda>u v. w_func (u, v)) E\<close>
-              q_asm by force
+          also have "... = ?w_M p"
+            using \<open>?w_M p =?min_w\<close> q_asm by force
           also have "... = wt w_func S"
-            by (metis is_perfect_matching_def p_def(1,2)
-                weight_equivalence)
+            using p_def weight_equivalence unfolding bipartite_graph.is_perfect_matching_def by auto
           finally show ?thesis .
         qed
 
-        have "?S_q = S"
-        proof -
-          have Sq_in_F: "?S_q \<in> ?F"
-            using q_asm unfolding perfect_matching_family_def bipartite_graph.is_perfect_matching_def by auto
+        then have "minimizer ?F w_func ?S_q"
+          using S_unique(1) \<open>?S_q \<in> ?F\<close> minimizer_def by metis
 
-          have "minimizer ?F w_func ?S_q"
-            by (metis S_unique(1) Sq_in_F
-                \<open>wt w_func (matching_to_set n q) = wt w_func S\<close>
-                minimizer_def)
-
-          show ?thesis
-            by (simp add: S_unique(2) Sq_in_F
-                \<open>minimizer (perfect_matching_family n E) w_func (matching_to_set n q)\<close>)
-        qed
+        have "?S_q = S" using S_unique(2) \<open>?S_q \<in> ?F\<close>
+          using \<open>minimizer ?F  w_func (matching_to_set n q)\<close>
+          by blast
 
         show "q = p"
           using \<open>matching_to_set n q = S\<close> is_perfect_matching_def
@@ -853,8 +715,6 @@ proof -
       qed
     qed
 qed
-
-
 
 lemma isolation_lemma_for_perfect_matching:
   fixes N :: nat
@@ -873,31 +733,27 @@ proof -
     "{w. bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w(u,v)) E} = {w. has_unique_minimizer ?F w}"
     by (simp add: pm_iso_equivalence)
 
-  have "finite ?U"
+  have U_finite: "finite ?U"
   proof -
     have "finite ({0..<n} \<times> {0..<n})" by simp
     then show "finite E"
       using assms(3) finite_subset by blast
   qed
 
-  have "?F \<subseteq> Pow ?U"
+  have F_sub: "?F \<subseteq> Pow ?U"
     unfolding perfect_matching_family_def matching_to_set_def bipartite_graph.is_perfect_matching_def
     by blast
 
-  have "?F \<noteq> {}"
+  have F_not_empty: "?F \<noteq> {}"
   proof -
-    obtain p where "bipartite_graph.is_perfect_matching n E p"
-      using assms(2) by auto
-    then have "matching_to_set n p \<in> ?F"
+    obtain p where "is_perfect_matching p" using assms(2) by blast
+    then show ?thesis 
       unfolding perfect_matching_family_def
-      using is_perfect_matching_def by auto
-    then show ?thesis by auto
+      using is_perfect_matching_def by auto 
   qed
 
   have prob_bound: "measure_pmf.prob (w_pmf N ?U){w. has_unique_minimizer ?F w} \<ge> 1 - real(card ?U)/real N"
-    using isolation_lemma_main[of ?U ?F N]
-    using `finite ?U` `?F \<subseteq> Pow ?U` `?F \<noteq> {}` `N \<ge> 1` 
-    by simp
+    using isolation_lemma_main[OF U_finite F_sub F_not_empty assms(1)] by simp
 
   show ?thesis
     by (simp add: condition_eq prob_bound)
