@@ -47,7 +47,7 @@ In the following sections, we formalize how this uniqueness allows us to "extrac
 \label{sec:tutte_matrix}
 
 To design an efficient parallel algorithm, we must transform the combinatorial search for matchings into a problem that can be solved using parallel linear algebra.
-The standard approach utilizes the \textit{Tutte matrix} (often referred to as the Edmonds matrix in the bipartite case) to encode the graph structure into a matrix form.
+The standard approach utilizes the \textit{Tutte matrix} \cite{mulmuley1987matching} (often referred to as the Edmonds matrix in the bipartite case) to encode the graph structure into a matrix form.
 
 \subsection{Matrix Construction in Isabelle/HOL}
 
@@ -61,7 +61,7 @@ definition D_entry ::
     "D_entry i j = (if (i,j) : E then (2::int) ^ (w i j) else 0)"
 \end{lstlisting}
 
-The choice of $2^{w_{i,j}}$ as the matrix entry is a critical design decision.
+The choice of $2^{w_{i,j}}$ as the matrix entry, as proposed in \cite{mulmuley1987matching, Gupta2011Lec10} is a critical design decision to prevent algebraic cancellation.
 By using powers of 2, the total weight of a perfect matching becomes the exponent in the Leibniz expansion of the determinant.
 This algebraic encoding allows the determinant to "store" information about all feasible matchings simultaneously within its binary representation.
 

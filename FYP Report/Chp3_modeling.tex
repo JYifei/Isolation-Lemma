@@ -2,7 +2,7 @@
 \label{chp:modeling}
 
 This chapter marks the first step in the formalization process by translating the core components of the Isolation Lemma into rigorous definitions with the Isabelle/HOL theorem proving environment.
-Building on the informal statement of the lemma provided in Chapter~\ref{chp:prelims}, our objective here is to move from intuitive, pen-and-paper reasoning to a precise and structured formal model.
+Building on the informal statement of the lemma provided in Chapter~`'\ref{chp:prelims}, our objective here is to move from intuitive, pen-and-paper reasoning to a precise and structured formal model.
 This transition corresponds to the intermediate stage in the formalization pipeline:
 from Pen-and-Paper Proofs (PP) to a Formal Proof (FP) representation that is machine-readable and logically well-formed, but not yet fully proved.
 
@@ -194,7 +194,7 @@ We cannot merely assume randomness; we must explicitly construct the underlying 
 
 This introduces a gap between intuition and formalization.
 We must define a concrete probability mass function (PMF) over the function space $U \to \{1 \dots. N\}$.
-To bridge this gap, we make us of the \texttt{HOL-Probability} library, which formalizes discrete distributions using measure theory.
+To bridge this gap, we make us of the \texttt{HOL-Probability} library \cite{isabelleprob}, which formalizes discrete distributions using measure theory.
 This library makes the probability assumptions of the Isolation Lemma explicit objects of reasoning, rather than implicit conditions.
 
 
@@ -209,7 +209,7 @@ To transform the intuitive statement "weights are chosen independently and unifo
 In pen-and-paper reasoning, such product distributions are usually left implicit.
 In our formal setting, both the uniform marginals and their combination must be constructed explicitly.
 
-The uniform marginal distribution on $\{1, \dots, N\}$ is implemented using \texttt{pmf\_of\_set}, which constructs a uniform PMF over any finite non-empty set.
+The uniform marginal distribution on $\{1, \dots, N\}$ is implemented using \texttt{pmf\_of\_set} \cite{isabelleprob}, which constructs a uniform PMF over any finite non-empty set.
 
 These marginals are then combined using the \texttt{Pi\_pmf} operator, which creates a product distribution over the domain $U$, with independent sampling at each point.
 

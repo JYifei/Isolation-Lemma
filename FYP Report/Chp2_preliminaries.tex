@@ -15,16 +15,16 @@ Properties that are often left implicit in pen-and-paper proofs -- such as finit
 As a result, proofs developed in an interactive theorem prover do not appeal to informal intuition, but instead derive correctness solely from the soundness of the underlying logic.
 
 Interactive theorem proving has been successfully applied across a wide range of areas in computer science and mathematics, including program verification, compiler correctness, and the formalization of foundational mathematical theories.
-In algorithmic, ITP provides a principled framework for reasoning about complex algorithmic arguments, particularly when proofs involve subtle dependencies between combinatorial and logical assumptions.
+In the study of algoriths, ITP provides a principled framework for reasoning about complex algorithmic arguments, particularly when proofs involve subtle dependencies between combinatorial and logical assumptions.
 
-From a methodological perspective, ITP also supports the digitalization of mathematical proofs.
+From a methodological perspective, ITP also supports the digitalization of mathematical proof \cite{qed1994}.
 Formal developments can be stored as machine-checkable artifacts, reused across projects, and extended collaboratively.
 This enables large-scale proof developments and supports emerging forms of human--computer and human--AI collaboration in formal reasoning.
 
 \section{Isabelle/HOL System}
 
 Isabelle is a generic interactive theorem proving framework that supports formal reasoning in a variety of logical systems.
-Among its most widely used instantiations is Isabelle/HOL, which is based on classical higher-order logic (HOL).
+Among its most widely used instantiations is Isabelle/HOL, which is based on classical higher-order logic (HOL) \cite{nipkow2002isabelle}.
 In this setting, logical formulas are constructed using typed $\lambda$-calculus, and reasoning proceeds within a sound and expressive classical logic.
 
 Isabelle/HOL provides a rich environment for formal mathematical development.
@@ -32,7 +32,7 @@ Its logic supports higher-order functions, inductive definitions, and structured
 The system is accompanied by an extensive standard library covering areas such as sets, relations, algebraic structures, and real analysis.
 
 Of particular relevance to this report is Isabelle/HOL's support for probabilistic reasoning.
-The system includes a mature probability theory library that formalizes measure spaces, random variables, and probability distributions within the HOL framework.
+The system includes a mature probability theory library that formalizes measure spaces, random variables, and probability distributions within the HOL framework \cite{isabelleprob}.
 This allows probabilistic arguments to be expressed using explicit constructions of probability spaces and measurable functions, rather than relying on informal probabilistic intuition.
 
 Taken together, these features make Isabelle/HOL a suitable platform for the formal verification of randomized algorithms and probabilistic lemmas.
@@ -148,7 +148,7 @@ This issue is particularly pronounced in the context of parallel computation.
 Parallel algorithms aim to exploit independence and concurrency, but symmetry among solutions often prevents independent local decisions from composing into a globally consistent matching.
 In the absence of a canonical choice, parallel processes may conflict or fail to converge on a single valid solution.
 
-From a complexity-theoretic viewpoint, this symmetry barrier is a central obstacle in the design of efficient parallel algorithms for matching.
+From a complexity-theoretic viewpoint, this symmetry barrier is a central obstacle \cite{mulmuley1987matching, 315817} in the design of efficient parallel algorithms for matching.
 While the Perfect Matching problem is solvable in polynomial time by classical sequential algorithms, obtaining highly parallel algorithms requires additional structure to break this symmetry in a controlled way.
 
 Randomization provides a powerful mechanism for addressing this challenge.
