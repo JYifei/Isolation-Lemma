@@ -1,20 +1,20 @@
 \chapter{Proof Construction}
 \label{chp:proof}
 
-In this chapter, we present the formal proof of the Isolation Lemma.
+In this chapter, we construct a machine-checked proof of the Isolation Lemma in Isabelle/HOL and present the development in three layers (PP/SP/FP) to bridge informal intuition and formal verification.
 Unlike pen-and-paper proofs, formal verification requires every mathematical step to be made fully explicit.
 This includes not only the main reasoning steps, but also background obligations such as existential witnesses, measurability, independence, type correctness, and totality.
 
 Our goal is to construct a fully formal proof (FP) of the Isolation Lemma in Isabelle/HOL.
 However, it is neither practical nor desirable to translate a pen-and-paper (PP) proof directly into formal code.
-Instead, we introduce an intermediate stage, which we refer to as the \emph{precise pen-and-paper} (PPP) level.
-This stage consists of structurally explicit arguments and decompositions that closely resemble formal code, but are still described in human-readable mathematical language.
+Instead, we introduce an intermediate stage, which we refer to as the structured proof (SP) level.
+This stage presents a structured decomposition of the argument, designed to align with the proof obligations of Isabelle/HOL (e.g.\ existence, measurability, and type constraints) while remaining human-readable.
 
 Thus, each proof component in this chapter is presented in three layers:
 \begin{itemize}
-    \item \textbf{PP:} The intuitive pen-and-paper ideas from the literatures.
-    \item \textbf{PPP:} A human-readable structured and detailed decomposition of the argument, refined to match the constraints of the formal system.
-    \item \textbf{FP:} The final formalization codes in Isabelle/HOL.
+    \item \textbf{PP:} The intuitive pen-and-paper sketches from the literature.
+    \item \textbf{SP:} A structured and detailed decomposition refined to match the proof obligations of Isabelle/HOL.
+    \item \textbf{FP:} The corresponding formalization code in Isabelle/HOL.
 \end{itemize}
 
 We organize the whole proof as a sequence of structural reductions:
@@ -33,7 +33,7 @@ In particular, for a given family of sets $\mathcal{F}$ and a weight function $w
 In informal proofs, this step is usually omitted.
 Since weights are natural number and the family $\mathcal{F}$ is assumed to be non-empty, the existence of a minimizer is considered self-evident.
 
-\paragraph{PPP.}
+\paragraph{SP.}
 In preparation for formalization, however, we must isolate this assumption and state it precisely, since later constructs (like $\alpha(x)$ or uniqueness predicates) depend on the existence of at least one such set.
 
 \noindent
@@ -72,7 +72,7 @@ In pen-and-paper proofs, non-uniqueness is usually described in a purely intuiti
 saying that a minimizer is "not unique" simply means that there exist at least two different sets in $\mathcal{F}$ that both attain the minimum weight.
 This idea is often expressed informally by statements such as "there are two distinct minimizers", without any further logical unpacking.
 
-\paragraph{PPP.}
+\paragraph{SP.}
 To make this intuition compatible with formal reasoning,we refine it into a positive existential formulation.
 Instead of negating a uniqueness statement, we characterize failure of uniqueness by the explicit existence of two distinct witnesses that both satisfy the minimizer predicate.
 
@@ -85,7 +85,7 @@ A \in \mathcal{F} \;\land\; B \in \mathcal{F} \;\land\;
 \text{minimizer}(\mathcal{F}, w, B) \;\land\;
 A \neq B.
 \]
-This reformulation eliminates the outer negation and transformes the non-uniqueness into concrete objects that can be fixed in subsequent arguments.
+This reformulation eliminates the outer negation and transforms the non-uniqueness into concrete objects that can be fixed in subsequent arguments.
 
 Moreover, if $A$ and $B$ are both minimizers, then they must attain the same total weight.
 This follows directly from the definition of the minimizer predicate:
@@ -94,7 +94,7 @@ This elementary but explicit observation will be used later when comparing the c
 
 \noindent
 \textbf{Lemma (Non-Uniqueness via Two Minimizers).}
-\emph{Assume $\mathcal{F} \neq \emptyset$. Then the minimizer of $\mathcal{F}$ under $w$ is not unique if and only if there exist two distinct sets $A, B \in \mathcal{F}$ such that both $A$ and $B$ are minimizers; equivalently, there exist $A \neq B$ in $\mathcal{F}$ with
+\emph{Assume $\mathcal{F} \neq \emptyset$. Then the minimizer of $\mathcal{F}$ under $w$ is not unique if and only if there exist two distinct sets $A, B \in \mathcal{F}$ such that both $A$ and $B$ are minimizers; i.e., there exist $A \neq B$ in $\mathcal{F}$ with
 \[
 \forall S \in \mathcal{F},\; w(A) \le w(S) \;\land\; w(B) \le w(S),
 \]
@@ -135,12 +135,12 @@ Intuitively, $\alpha(x)$ isolates the dependence of the total weight of a set on
 Formally, $\alpha(x)$ is defined as the difference between two minimal weight values determined by the family $\mathcal{F}$.
 The first term represents the minimum total weight among all sets in $\mathcal{F}$ that do not contain $x$.
 The second term represents the minimum residual weight required to form a set in $\mathcal{F}$ that contains $x$, excluding the contribution of $x$ itself.
-This definition was introduced by Mulmuley et al.\ and plays a crucial role in isolating single-coorrdinate events.
+This definition was introduced by Mulmuley et al.\ and plays a crucial role in isolating single-coordinate events.
 
 \medskip
 
 In our formalization, $\alpha(x)$ is defined using Isabelle's \texttt{LEAST} operator, which selects the least natural number satisfying a given predicate.
-At this stage, $\alpha(x)$ is treated as an abstract quantity defined in terms of minimal weights, without assuming that the minima are realized by any particular sets.
+We first define $\alpha(x)$ via \texttt{LEAST} to avoid committing to specific witnesses; the witness-based simplifications are derived later from the existence-of-minimizer lemmas.
 
 \medskip
 
@@ -154,7 +154,7 @@ Once a minimizer exists, the least total weight among sets not containing $x$ is
 Likewise, the least residual weight among sets containing $x$ is obtained by removing $x$ from a minimizer that contains it.
 This allows the abstract \texttt{LEAST}-based definition of $\alpha(x)$ to be replaced by an ordinary arithmetic expression involving concrete minimizers.
 
-\paragraph{PPP.}
+\paragraph{SP.}
 To make this intuition precise, we analyze the two \texttt{LEAST} expressions in the definition of $\alpha(x)$ separately.
 
 First, suppose that $B$ is a minimizer of $\mathcal{F}$ under the weight function $w$, and that $x \notin B$.
@@ -202,7 +202,7 @@ Intuitively, $\alpha(x)$ should not depend on the particular value of the single
 Changing the value of $w(x)$ shifts the total weight of every set containing $x$ by the same offset, while leaving the relative ordering of weights determined by the remaining elements unchanged.
 Hence the two minima defining $\alpha(x)$ -- one over sets excluding $x$, and one over residual weights of sets including $x$ -- remain invariant under modifications of $w(x)$.
 
-\paragraph{PPP.}
+\paragraph{SP.}
 We now formulate this independence property as a formal lemma, which will serve as a key technical interface for the probabilistic argument in the next section.
 
 \noindent
@@ -250,7 +250,7 @@ This lemma is proved by establishing weight congruence on sets contained in $U -
 We now establish the key structural link between the failure of uniqueness and the auxiliary quantity $\alpha(x)$.
 
 Assume that the minimizer of $\mathcal{F}$ under $w$ is not unique.
-Then there exist two distance minimizers $A,B \in \mathcal{F}$.
+Then there exist two distinct minimizers $A,B \in \mathcal{F}$.
 Choose an element $x \in A \setminus B$.
 Since $A$ and $B$ are minimizers, their total weights coincide:
 \[
@@ -266,7 +266,7 @@ Hence,
 \]
 Therefore, non-uniqueness implies the existence of an element $x \in U$ such that $w(x) = \alpha(x)$.
 
-\paragraph{PPP.}
+\paragraph{SP.}
 
 The pen-and-paper argument above already matches closely the structure of the formal proof.
 The only additional ingredients required for formalization are the explicit side conditions ensuring that the two \texttt{LEAST} expression in the definitions of $\alpha(x)$ are well-defined and can be eliminated.
@@ -338,19 +338,19 @@ Equivalently, the probability that the minimizer is unique satisfies
 This inequality constitutes the statement of the Isolation Lemma.
 
 
-\paragraph{PPP.}
+\paragraph{SP.}
 
-The formal proof follows the same structure as the pen-and-paper argument, but it requires an explicit decomposition of the probabilistic reasoning into measurable events and independent random variables.
+The formal proof follows the same high-level structure as the pen-and-paper argument, but it must expose the proof obligations that are implicit informally.
 
-First, the collision event $\{\, w(x) = \alpha(x) \,\}$ is rewritten as a finite disjunction:
+To obtain an explicit probability bound inside Isabelle/HOL, the event $\{\, w(x) = \alpha(x) \,\}$ is decomposed into a finite union over $k \in \{1,\dots,N\}$:
 \[
 \{\, w(x) = \alpha(x) \,\}
 \;=\;
 \bigcup_{k=1}^{N} \{\, \alpha(x) = k \;\wedge\; w(x) = k \,\}.
 \]
-This step relies on the fact that under the product probability space, the coordinate random variable $w(x)$ almost surely takes values in $\{1,\dots,N\}$, while all other values have probability zero.
+This technical decomposition allows the application of independence at the level of random variables together with uniform point-probability bounds.
 
-Second, to obtain a multiplicative bound on each summand, the independence between $w(x)$ and $\alpha(x)$ must be established at the level of random variables.
+To obtain a multiplicative bound on each summand, the independence between $w(x)$ and $\alpha(x)$ must be established at the level of random variables.
 This is achieved by exploiting the product structure of the underlying PMF.
 The restriction of a sample function to $\{x\}$ and to $U \setminus \{x\}$ yields two independent components.
 Since $w(x)$ depends only on the first component, while $\alpha(x)$ depends only on the second (by the independence-of-$\alpha$ lemma), their compositions are independent random variables.
@@ -430,11 +430,11 @@ theorem isolation_lemma_main:
 This theorem completes the formal derivation from the structural collision event to the global lower bound on the probability of uniqueness.
 
 Taken together, these lemmas bridge the gap between the informal probabilistic argument and its fully formal counterpart.
-They make explicit the two technical ingredients that are implicit in pen-and-paper proofs: the measurability of $alpha(x)$ and its independence from the coordinate $w(x)$.
+They make explicit the two technical ingredients that are implicit in pen-and-paper proofs: the measurability of $\alpha(x)$ and its independence from the coordinate $w(x)$.
 With these in place, the Isolation Lemma follows directly by applying the union bound inside Isabelle/HOL's probability framework.
 
-\section*{Chapter Summary}
-In this chapter, we presented a fully formal proof of the Isolation Lemma in Isabelle/HOL, transforming Pen-and-Paper Proof into computer-verifiable Formal Proof.
+\section{Chapter Summary}
+In this chapter, we presented a fully formal proof of the Isolation Lemma in Isabelle/HOL, by systematically refining a classical proof into structured proof steps and finally machine-checked Isabelle/HOL code.
 We reformulated non-uniqueness as the existence of two distinct minimizers, introduced the auxiliary quantity $\alpha(x)$, and showed how it captures the precise collision event responsible for ties.
-A key technical contribution was the proof that $\alpha(x)$ is independent of the individual weight $w(x)$, enabling a reduction to single-coordinate probabilistic events.
+A key technical ingredient is showing that that $\alpha(x)$ is independent of the individual weight $w(x)$, which enables a reduction to single-coordinate probabilistic events.
 Finally, by establishing measurability, independence, and a uniform point probability bound within a product probability space, we derived the standard $1 - |U|/N$ uniqueness bound in a fully mechanized manner.

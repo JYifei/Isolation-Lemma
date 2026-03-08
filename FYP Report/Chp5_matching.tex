@@ -1,6 +1,274 @@
 \chapter{Perfect Matching Problem}
 \label{chp:matching}
-TODO: Formal proof of Parallel Algorithm for Perfect Matching Problem.
 
-Note: Formal proof of this algorithm has been fully implemented and pushed to github repository; however, code cleaning is still needed.
-I will work on cleaning the code in the following weeks and document the finalized implementation after that.
+\section{Introduction to Randomized Parallel Matching}
+\label{sec:matching_intro}
+
+The Perfect Matching problem is a fundamental problem in combinatorial optimization and complexity theory.
+Formally, given a bipartite graph $G = (U \cup V, E)$ where $|U| = |V| = n$. a \textit{matching} is defined as a set of edges $M \subseteq E$ such that no two edges in $M$ share a common vertex.
+A matching $M$ is said to be \textit{perfect} if it contains exactly $n$ edges, effectively covering every vertex in the graph.
+
+While efficient sequential algorithms for finding perfect matchings, such as the augmenting path method, have been well-established, developing an efficient parallel algorithm remains a significant challenge.
+This gap between sequential and parallel complexity is not merely a matter of implementation, but is rooted in the structural properties of the problem.
+
+\subsection{Decision versus Construction}
+In complexity theory, there is a notable distinction between the \textit{decision} version of a problem (answering if a matching exists) and the \textit{construction} version(outputting the edges of the matching).
+For the perfect matching problem, the decision version can be solved in parallel by calculating the determinant of the Tutte matrix, which belongs to the complexity class \textbf{NC}.
+
+However, constructing the matching itself is significantly harder in a parallel setting.
+The standard sequential approach of greedily picking edges or finding augmenting paths is inherently serial, as each step depends on the state resulting from the previous step.
+This sequential dependency makes it difficult to distribute the workload across multiple processors effectively.
+
+\subsection{The Symmetry Barrier and Coordination}
+
+The primary obstacle to parallelizing the search for a perfect matching is known as the \textit{Symmetry Barrier} \cite{Gupta2011Lec10}.
+In many graphs, there can be an exponential number of distinct perfect matchings.
+In a sequential setting, an algorithm can easily break this symmetry by picking the first valid matching it finds.
+
+In a parallel environment, multiple processors must work on different edges simultaneously.
+If the graph contains multiple perfect matchings, say $M_1$ and $M_2$, one processor might select an edge from $M_1$, while another selects an edge from $M_2$.
+Because these edges may not belong to the same global solution, their union is unlikely to form a valid perfect matching.
+
+Without a mechanism to ensure that all processors converge on the \textit{same} solution, parallel coordination becomes impossible.
+
+\subsection{Isolation as a Solution}
+
+To overcome the symmetry barrier, we utilize the \textbf{Randomized NC (RNC)} strategy proposed by Mulmuley, Vazirani, and Vazirani \cite{Gupta2011Lec10}.
+The core idea is to transform the symmetric solution space into an asymmetric one by introducing randomness.
+
+By assigning random weights to each edge, we ensure that different perfect matchings likely have different total weights.
+The \textbf{Isolation Lemma}, formally proved in Chapter \ref{chp:proof}, provides the mathematical guarantee that with high probability, there is a \textit{unique} minimum-weight perfect matching.
+
+This uniqueness is the foundation of the parallel algorithm: if there is only one target solution, every processor can independently decide if its edge is part of that specific matching.
+The need for inter-processor communication is eliminated, and the symmetry is broken.
+In the following sections, we formalize how this uniqueness allows us to "extract" the matching using algebraic methods.
+
+\section{Algebraic Modeling: The Tutte Matrix}
+\label{sec:tutte_matrix}
+
+To design an efficient parallel algorithm, we must transform the combinatorial search for matchings into a problem that can be solved using parallel linear algebra.
+The standard approach utilizes the \textit{Tutte matrix} (often referred to as the Edmonds matrix in the bipartite case) to encode the graph structure into a matrix form.
+
+\subsection{Matrix Construction in Isabelle/HOL}
+
+In our formalization, we consider a bipartite graph $G = (V, E)$ with $n$ vertices on each side.
+We represent the weight of an edge $(i, j)$ as $w_{i,j}$.
+In the \texttt{bipartite\_graph} locale, the matrix $D$ is constructed such that each entry $D_{i,j}$ encodes both the existence of an edge and its weight:
+
+\begin{lstlisting}[language=Isabelle, caption={Matrix Entry Definition}]
+definition D_entry :: 
+    "nat => nat => int" where
+    "D_entry i j = (if (i,j) : E then (2::int) ^ (w i j) else 0)"
+\end{lstlisting}
+
+The choice of $2^{w_{i,j}}$ as the matrix entry is a critical design decision.
+By using powers of 2, the total weight of a perfect matching becomes the exponent in the Leibniz expansion of the determinant.
+This algebraic encoding allows the determinant to "store" information about all feasible matchings simultaneously within its binary representation.
+
+\subsection{Determinant and Perfect Matchings}
+
+A perfect matching in a bipartite graph can be formally defined as a permutation $p$ of the set $\{0, \dots, n-1\}$ such that every pair $(i, p(i))$ is a valid edge in $E$.
+Our formal definition in Isabelle/HOL captures this requirement:
+
+\begin{lstlisting}[language=Isabelle, caption={Perfect Matching Definition}]
+definition is_perfect_matching :: 
+    "(nat => nat) => bool" where
+  "is_perfect_matching p <-> 
+    (p permutes {0..<n} & (ALL i < n. (i, p i) : E))"
+\end{lstlisting}
+
+The determinant of matrix $D$, defined via the Leibniz formula, serves as the primary tool for isolation:
+
+\begin{equation}
+    det(D) = \sum_{p \in S_n} \text{sgn}(p) 
+    \prod_{i=0}^{n-1} D_{i, p(i)}
+\end{equation}
+
+By substituting the definition of $D_{i,j}$, any term in the sum is non-zero if and only if the permutation $p$ corresponds to a valid perfect matching.
+For such a permutation, the contribution to the determinant is:
+
+\begin{equation}
+    \text{sgn}(p) \cdot \prod_{i=0}^{n-1} 2^{w_{i, p(i)}} 
+    = \text{sgn}(p) \cdot 2^{\sum w_{i, p(i)}} 
+    = \text{sgn}(p) \cdot 2^{weight(p)}
+\end{equation}
+
+If $p$ does not represent a perfect matching, at least one $D_{i, p(i)}$ is 0, causing the entire product to vanish.
+This mapping ensures that the determinant is a weighted sum of all perfect matchings, providing the necessary algebraic foundation for the subsequent extraction of the unique minimum matching.
+
+\section{The Weight-to-Multiplicity Bridge}
+\label{sec:weight_multiplicity}
+
+The core of the parallel matching algorithm lies in the relationship between the determinant of the Tutte matrix and the weights of the perfect matchings it represents.
+Once the Isolation Lemma ensures that the minimum-weight perfect matching $p_{min}$ is unique, the determinant $det(D)$ effectively becomes a binary encoding of the matching weights.
+
+\subsection{The Non-Cancellation Principle}
+In the Leibniz expansion of $det(D)$, each perfect matching $p$ contributes a term of the form $\text{sgn}(p) \cdot 2^{weight(p)}$.
+A potential concern in this algebraic sum is that terms with opposite signs might cancel each other out.
+However, because the weights are stored as exponents of 2, the term with the smallest exponent cannot be cancelled by any combination of terms with larger exponents.
+
+Formally, if $W_0$ is the unique minimum weight, $det(D)$ can be expressed as:
+\begin{equation}
+    det(D) = \text{sgn}(p_{min}) 2^{W_0} + 
+    \sum_{p \in P \setminus \{p_{min}\}} \text{sgn}(p) 2^{weight(p)}
+\end{equation}
+Since for all other matchings $p$, $weight(p) > W_0$, every term in the summation is a multiple of $2^{W_0+1}$.
+Therefore, the entire determinant is a multiple of $2^{W_0}$ but not of $2^{W_0+1}$, ensuring that the lowest non-zero bit of the sum is preserved.
+
+\subsection{Formalization via Multiplicity}
+To extract this minimum weight in Isabelle/HOL, we utilize the \texttt{multiplicity} function from the number theory library.
+The multiplicity of a prime $k$ in an integer $x$ is the largest power of $k$ that divides $x$.
+In our binary context, \texttt{multiplicity 2 det\_D} yields exactly $W_0$.
+
+We formalized this connection through several key lemmas.
+First, \texttt{multiplicity\_2\_abs} establishes the base case for powers of 2:
+
+\begin{lstlisting}[language=Isabelle, caption={Multiplicity of Power of 2}]
+lemma multiplicity_2_abs:
+  fixes x :: int
+  assumes "abs x = 2 ^ k"
+  shows "multiplicity 2 x = k"
+\end{lstlisting}
+
+Then, we established the main theorem relating the determinant to the unique minimum weight:
+
+\begin{lstlisting}[language=Isabelle, caption={Multiplicity of Determinant}]
+lemma unique_det_power_of_weight:
+  assumes "unique_min_weight_condition"
+  shows "multiplicity 2 det_D = min_weight_val"
+\end{lstlisting}
+
+This result is proven in Isabelle by applying \texttt{multiplicity\_eqI}, which requires showing that $2^{W_0}$ divides the sum and $2^{W_0+1}$ does not.
+The proof handles the summation by splitting it into the unique minimum term and the remaining "heavy" terms, formalizing the intuitive non-cancellation argument presented earlier.
+
+\section{Parallel Edge Extraction Logic}
+\label{sec:edge_extraction}
+
+The final stage of the parallel algorithm is to identify which edges $(i, j) \in E$ constitute the unique minimum-weight perfect matching $p_{min}$.
+Crucially, this step must be performed in parallel, meaning each edge must be testable independently of others.
+
+\subsection{Minors and Subgraph Matchings}
+For any edge $(i, j)$ we consider the minor $D_{i,j}$, which is the submatrix obtained by deleting the $i$-th row and $j$-th column of $D$.
+Algebraically, the determinant of this minor represents the sum of all perfect matchings in the subgraph $G \setminus \{u_i, v_j\}$.
+If an edge $(i, j)$ belongs to a perfect matching $p$ in $G$, then $p \setminus \{(i, j)\}$ must be a perfect matching in the reduced graph.
+
+In our formalization, we define \texttt{minor\_sum i j} to represent the contribution of all matchings containing the edge $(i, j)$.
+This relationship is captured by the lemma \texttt{minor\_sum\_decomposition}:
+
+\begin{lstlisting}[language=Isabelle, caption={Minor Sum Decomposition}]
+lemma minor_sum_decomposition:
+  assumes "i < n" "j < n" "(i,j) : E"
+  shows "minor_sum i j = D_entry i j * cofactor_sum i j"
+\end{lstlisting}
+
+This decomposition allows us to isolate the contribution of a single edge weight from the rest of the matching structure.
+
+\subsection{The Parallel Decision Predicate}
+To determine if $(i, j) \in p_{min}$, we compare the minimum weight of matchings containing $(i, j)$ with the global minimum weight $W_0$.
+If $(i, j)$ is part of the unique minimum matching, the minimum weight in the subgraph plus the edge weight $w_{i,j}$ must equal the global minimum weight.
+
+This core division logic can be expressed by the following identity:
+\begin{equation}
+    w(i,j) + \text{multiplicity}_2(\text{det}(D_{i,j})) = min\_weight\_val
+\end{equation}
+
+We formalized this as a necessary and sufficient condition in the theorem \texttt{edge\_test\_iff\_correct}:
+
+\begin{lstlisting}[language=Isabelle, caption={Correctness of Edge Extraction}]
+theorem edge_test_iff_correct:
+  assumes p_min_def: 
+    "is_perfect_matching p_min" 
+    "matching_weight p_min = min_weight_val"
+  assumes p_min_unique: 
+    "ALL q. is_perfect_matching q & matching_weight q 
+            = min_weight_val --> q = p_min"
+  shows "p_min i = j <-> 
+         (cofactor_sum i j ~= 0 & w i j + multiplicity 2 (cofactor_sum i j) = min_weight_val)"
+\end{lstlisting}
+
+This theorem provides the formal justification for the parallel algorithm.
+Each edge $(i, j)$ can be tested independently by computing the determinant of its corresponding minor.
+If the weight condition holds, the edge is guaranteed to be part of the unique matching $p_{min}$.
+Since determinant calculation is in \textbf{NC}, the entire matching can be constructed in parallel time.
+
+\section{Probabilistic Correctness via Isolation Lemma}
+\label{sec:matching_prob_correctness}
+
+The formal verification of the parallel matching algorithm is completed by establishing its probabilistic success guarantee.
+While Chapter \ref{chp:proof} provides a general proof of the Isolation Lemma for any finite family of sets, we must now specialize this result to the domain of perfect matchings in a bipartite graph.
+
+\subsection{Mapping Graphs to Sets}
+To apply the Isolation Lemma, we first define a formal mapping between graph-theoretic structures and the set-theoretic framework.
+The universe $U$ is identified with the set of edges $E$, and the family $\mathcal{F}$ is defined as the collection of all edge sets that constitute a valid perfect matching:
+
+\begin{lstlisting}[language=Isabelle, caption={Perfect Matching Family}]
+definition perfect_matching_family :: 
+    "nat => (nat * nat) set => ((nat * nat) set) set" where
+    "perfect_matching_family n E = 
+      {matching_to_set n p | p. 
+       p permutes {0..<n} & (ALL i < n. (i, p i) : E)}"
+\end{lstlisting}
+
+A critical step in this bridge is ensuring that the weight of a matching in the graph model is identical to the weight of the corresponding set in the isolation model.
+We established this via the lemma \texttt{weight\_equivalence}.
+Furthermore, the lemma \texttt{matching\_to\_set\_inj} ensures that each permutation corresponds to a unique set of edges, preventing any unintended collisions in the probability space.
+
+\subsection{Final Probability Bound}
+The equivalence between the graph-theoretic unique minimum condition and the set-theoretic \texttt{has\_unique\_minimizer} predicate is established in the lemma \texttt{pm\_iso\_equivalence}.
+This allows us to lift the general isolation bound to the specific case of bipartite matching.
+
+The theorem \texttt{isolation\_lemma\_for\_perfect\_matching} provides the machine-checked lower bound on the success probability:
+
+\begin{lstlisting}[language=Isabelle, 
+    caption={Isolation Lemma for Perfect Matching}]
+theorem isolation_lemma_for_perfect_matching:
+  fixes N :: nat
+  assumes "N >= 1"
+  assumes "EX p. is_perfect_matching p"
+  assumes "E <= {0..<n} * {0..<n}"
+  shows "measure_pmf.prob (w_pmf N E)
+      {w. unique_min_weight_condition (\lambda u v. w (u,v)) E}
+      >= 1 - (real (card E) / real N)"
+\end{lstlisting}
+
+This theorem completes the formal derivation.
+For a graph with edge set $E$ and weights chosen uniformly from $\{1, \dots, N\}$, the probability that the algorithm identifies a unique matching is at least $1 - |E|/N$.
+This result provides the formal justification for using randomized weighting to achieve parallel coordination in the Perfect Matching problem.
+
+\section{Formalization Challenges in Isabelle/HOL}
+\label{sec:matching_impl}
+
+The formalization of randomized parallel matching involves several technical challenges that are absent in informal presentations.
+These difficulties arise primarily from the strict requirement for type safety and the integration of disparate mathematical libraries within Isabelle/HOL.
+
+\subsection{Bridging Type Systems: Int versus Nat}
+
+A significant hurdle during implementation was the reconciliation of different numeric types.
+In Isabelle/HOL, the \texttt{multiplicity} function is defined over the \texttt{int} type within the number theory library.
+However, the \texttt{Determinants} library often operates over more general algebraic structures.
+
+Since the edge weights are naturally non-negative, we initially modeled them as \texttt{nat}.
+Yet, the determinant of a matrix with \texttt{sign p} (which can be $-1$) requires the codomain to be \texttt{int}.
+This necessitated the use of explicit type casting and lemmas to prove that properties like multiplicity are preserved.
+This technical detail required formal justification via lemmas such as \texttt{multiplicity\_2\_not\_dvd\_Suc}.
+
+\subsection{Library Integration and Automation}
+
+Another challenge involved the integration of the \texttt{Permutations} library with the \texttt{Probability} library.
+To prove the final probability bound, we had to ensure that the combinatorial structure could be measured within the product probability space.
+
+A major effort was spent on the lemma \texttt{unique\_subset\_sum\_power\_of\_weight}.
+In an informal setting, one might simply state that higher powers of 2 do not affect the lowest bit.
+In Isabelle, this requires a rigorous proof to show that a sum of multiples of $2^{k+1}$ remains a multiple of $2^{k+1}$, thus not interfering with a single term of value $2^k$.
+The use of structured proof steps allowed us to manage this complexity by breaking the summation logic into manageable sub-goals. 
+
+\section{Chapter Summary}
+\label{sec:matching_summary}
+
+In this chapter, we have presented a complete formal verification of a randomized parallel algorithm for the Perfect Matching problem.
+By constructing the problem as a bipartite graph within Isabelle/HOL, we demonstrated how the abstract probabilistic guarantees of the Isolation Lemma can be translated into concrete algebraic properties of the Tutte matrix.
+
+We formally established that by encoding edge weights as powers of 2, the determinant of the matrix becomes a structured representation of all possible matchings.
+The core of our verification relied on the "Weight-to-Multiplicity" bridge, where we proved that the multiplicity of 2 in the determinant identifies the exact weight of the unique minimum-weight matching.
+Furthermore, we verified the parallel edge extraction logic, proving that each edge can independently determine its membership in the matching by calculating its corresponding minor.
+This chapter completes the transition from the foundational probability theory established in Chapter \ref{chp:proof} to a high-level application in randomized algorithm analysis, achieving a fully machine-checked proof of correctness for a Randomized NC (RNC) algorithm algorithm.

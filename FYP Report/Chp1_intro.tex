@@ -1,7 +1,7 @@
 \chapter{Introduction}
 \label{chp:intro}
 
-Randomization has become one of the central paradigms of modern theoretical computer science (TCS). 
+Randomization has become one of the central paradigms of modern theoretical computer science (TCS) \cite{motwani1995randomized}. 
 Over the past few decades, randomized methods have shaped the design and analysis of algorithms, yielding constructions that are simpler, faster, or in some settings seemingly out of reach for known deterministic techniques.
 
 At the heart of randomized algorithms lies a collection of probabilistic lemmas that explain why randomness enforces useful structural properties -- for instance, why a random perturbation can isolate a unique optimum among many candidates.
@@ -26,23 +26,23 @@ Our formalization makes the underlying probability space and all dependencies ex
 \subsection{Randomized Algorithms in TCS}
 Randomized algorithms are a widely studied class of algorithms in theoretical computer science.
 
-Unlike deterministic algorithms, randomized algorithms incorporate randomness to break symmetry, simplify theoretical constructions, and achieve improved expected performance.
-Such algorithms have been widely used in matching problems, parallel computing, approximation algorithms, and the construction of complex combinatorial structures.
+Unlike deterministic algorithms, randomized algorithms incorporate randomness to break symmetry (often referred to as the \emph{symmetry barrier} in parallel complexity \cite{mulmuley1987matching}), simplify theoretical constructions, and achieve improved expected performance.
+Such algorithms have been widely used in matching problems, parallel computing, approximation algorithms \cite{vazirani2001approximation}, and the construction of complex combinatorial structures.
 
 In many classical results, the introduction of randomized weights serves as a general technique for enforcing certain ``uniqueness'' or ``isolation'' properties.
 For example, in several parallel algorithms and combinatorial optimization problems, algorithmic correctness relies on the fact that, after a random perturbation, a minimum structure becomes unique with high probability.
 
-The Isolation Lemma is a canonical instance of this principle. 
+The Isolation Lemma, first introduced by Mulmuley, Vazirani, and Vazirani \cite{mulmuley1987matching}, is a canonical instance of this principle. 
 Informally, this lemma states that when random weights are assigned independently to elements of a finite universe, there is a high probability that a unique minimum-weight set exists within a given family of subsets.
-This lemma provides a theoretical foundation for numerous randomized algorithms and plays a critical role in algorithmic frameworks for problems such as Perfect Matching.
+This lemma provides a theoretical foundation for numerous randomized algorithms and plays a critical role in algorithmic frameworks for problems such as Perfect Matching \cite{lovasz1979determinants}.
 
 \subsection{Formalization and Theorem Proving}
 
 In theoretical computer science, many fundamental results rely on intricate mathematical arguments and precise logical reasoning.
-As theoretical frameworks continue to develop, the scale and complexity of such proofs have grown substantially, making traditional human-based verification increasingly difficult.
+As theoretical frameworks continue to develop, the scale and complexity of such proofs have grown substantially, making traditional human-based verification increasingly difficult \cite{qed1994}.
 
 Formalized mathematics and interactive theorem proving (ITP) offer an alternative approach to reasoning about mathematical theories.
-In this setting, definitions, theorems, and proofs are encoded within a formal logical system, and every inference step is checked rigorously by a computer.
+In this setting, definitions, theorems, and proofs are encoded within a formal logical system \cite{nipkow2002isabelle}, and every inference step is checked rigorously by a computer.
 This provides a level of precision and reliability that is difficult to achieve through informal reasoning alone.
 
 A key characteristic of interactive theorem proving is that all assumptions must be stated explicitly.
@@ -53,11 +53,11 @@ Beyond individual correctness guarantees, ITP also contributes to the digitaliza
 Formal developments can be stored, reused, and extended, enabling large-scale collaboration and incremental verification across research communities.
 This shift supports new forms of human--computer and human--AI collaboration in mathematics and theoretical computer science.
 
-In recent years, formalized methods have been successfully applied across many areas in computer science, including program verification, compiler correctness, and the formalization of foundational mathematical theories.
+In recent years, formalized methods have been successfully applied across many areas in computer science, including program verification, compiler correctness \cite{leroy2009compcert}, and the formalization of foundational mathematical theories \cite{Gonthier2005ACP}.
 Within theoretical computer science, formal verification has gradually expanded from classical mathematical results to core theorems in algorithm theory and computational complexity.
 
 However, the formal verification of randomized algorithms poses additional challenges.
-Randomized algorithms combine complex combinatorial reasoning with probabilistic concepts such as independence, distributions, and expectations, all of which must be expressed through explicit constructions rather than being assumed implicitly.
+Randomized algorithms combine complex combinatorial reasoning with probabilistic concepts such as independence, distributions, and expectations, all of which must be expressed through explicit constructions within a rigorous measure-theoretic framework \cite{isabelleprob}.
 Against this background, the formal verification of key probabilistic lemmas has emerged as an important research direction in interactive theorem proving.
 
 The Isolation Lemma serves as a representative example of such results.

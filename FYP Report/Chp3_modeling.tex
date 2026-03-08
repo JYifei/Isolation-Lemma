@@ -3,15 +3,15 @@
 
 This chapter marks the first step in the formalization process by translating the core components of the Isolation Lemma into rigorous definitions with the Isabelle/HOL theorem proving environment.
 Building on the informal statement of the lemma provided in Chapter~\ref{chp:prelims}, our objective here is to move from intuitive, pen-and-paper reasoning to a precise and structured formal model.
-This transition corresponds to the intermediate stage in the formalization pipline:
-from Pen-and-Paper Proofs (PP) to a Formal Proof (FP) representation that is is machine-readable and logically well-formed, but not yet fully proved.
+This transition corresponds to the intermediate stage in the formalization pipeline:
+from Pen-and-Paper Proofs (PP) to a Formal Proof (FP) representation that is machine-readable and logically well-formed, but not yet fully proved.
 
 We proceed by constructing the essential components of the lemma layer by layer.
 First, we define the underlying universe of the elements and the weight functions, and explain the rationale of choosing natural numbers for weight representation.
 Second, we formalize the concept of the minimizer and the condition of its uniqueness within a family of sets.
 Finally, we construct the product probability space using HOL-Probability Library, ensuring that the weights are distributed uniformly and independently.
 
-These definitions act as the foundation upon with the correctness proof in Chapter \ref{chp:proof} is built.
+These definitions act as the foundation upon which the correctness proof in Chapter \ref{chp:proof} is built.
 Special attention is given to the design decisions that facilitate proof automation.
 In particular, we carefully handle finiteness assumptions and the construction of measure spaces, as these aspects are crucial for enabling automated reasoning in Isabelle/HOL.
 
@@ -79,7 +79,7 @@ It is crucial to note that in Isabelle/HOL, the summation operator is only mathe
 If $S$ were infinite, the summation would return 0 by definition in the standard library.
 This finiteness condition is usually implicit in informal proofs, but must be enforce explicitly in Isabelle/HOL to avoid unintended semantics.
 
-Consequently, throughout our formalization, we do not rely on an implicit assumption that the universe in finite, which is often overlooked in pen-and-paper proofs.
+Consequently, throughout our formalization, we do not rely on an implicit assumption that the universe is finite, which is often overlooked in pen-and-paper proofs.
 As it is a mandatory step in formal verification, we explicitly enforce the assumption \texttt{finite S} or \texttt{finite U} locally in all lemmas involving weight calculations.
 Accordingly, all lemmas involving weight computations in this development explicitly assumes \texttt{finite U} or \texttt{finite S}, making finiteness a first-class requirement rather than an implicit convention.
 
@@ -116,7 +116,7 @@ Listing~\ref{lst:minimizer} shows how the intuitive minimizer definition is dire
 It is important to note that this definition is purely predicate-based.
 The predicate \texttt{minimizer F w A} does not, by itself, assert the existence or uniqueness of such a set.
 These properties must be established separately under additional assumptions on the family $F$ and the weight function $w$.
-In the setting of formal proof, such distinctions are neccessary to avoid implicitly assuming the existence or uniqueness of minimizers.
+In the setting of formal proof, such distinctions are necessary to avoid implicitly assuming the existence or uniqueness of minimizers.
 
 The Isolation Lemma goes beyond existence -- its core claim concerns the \textbf{uniqueness} of the minimizer under random weights.
 To formalize this probabilistic uniqueness claim, we define a predicate \texttt{has\_unique\_minimizer}.
@@ -228,7 +228,7 @@ A technical nuance in this definition is the argument \texttt{(0::nat)} passed t
 Since functions in Isabelle/HOL are total, they must return a value even for inputs outside their logical domain ($x \notin U$). Here, \texttt{0} serves as the default value for such out-of-domain queries.
 While this implementation detail is necessary to satisfy Isabelle's type system, it does not affect the mathematical validity of the lemma, as our reasoning is strictly confined to the elements within $U$.
 
-By modeling the randomness as a PMF object, probabilistic events become first-class objects in the logic, allowing standard measure theoretic reasnong, such as union bounds, to be carried out within Isabelle/HOL.
+By modeling the randomness as a PMF object, probabilistic events become first-class objects in the logic, allowing standard measure theoretic reasoning, such as union bounds, to be carried out within Isabelle/HOL.
 
 \paragraph{From Modeling to Proof.}
 

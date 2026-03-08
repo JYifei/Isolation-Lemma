@@ -1,1 +1,63 @@
 \chapter{Conclusion and Future Work}
+\label{chp:conclusion}
+
+\section{Summary of Research Achievements}
+This report has presented a comprehensive formal verification of a Randomized Parallel Matching algorithm, centered around a machine-checked proof of the Isolation Lemma in Isabelle/HOL.
+By navigating the transition from pen-and-paper probabilistic intuition to structured formal logic, we have established a rigorous foundation for reasoning about randomized algorithmic constructions.
+
+The primary contributions of this work are:
+\begin{itemize}
+    \item \textbf{Rigorous Foundation for Isolation}:
+    We constructed a complete product probability space and proved the $1 - |U|/N$ success bound, making all assumptions about measurability and independence explicit.
+    \item \textbf{Algorithmic Correctness}:
+    We successfully applied the Isolation Lemma to verify the "Weight-to-Multiplicity" bridge and the parallel edge extraction logic using the Tutte matrix and its minors.
+    \item \textbf{Bridging the Formalization Gap}:
+    We employed a layered PP/SP/FP approach to connect informal folklore-style proofs with fully formal machine-checked code.
+\end{itemize}
+
+\section{Methodological Lessons and Reflections}
+\label{sec:lessons}
+
+The process of formalizing the Isolation Lemma and its application to the Perfect Matching problem has yielded several methodological insights into the nature of randomized algorithm verification.
+
+\subsection{The Ontology of Randomness: From Intuition to PMF Objects}
+A primary reflection from the modeling phase in Chapter \ref{chp:modeling} is that randomness must be treated as a first-class mathematical object rather than an implicit environmental property.
+In classical RNC analysis, probabilistic intuition often obscures subtle dependencies.
+By explicitly constructing product probability spaces using the \texttt{Pi\_pmf} constructor, we transitioned from "vague" randomized processes to machine-verifiable measures.
+This rigor is essential to ensure that every assumption about independence is logically grounded.
+
+\subsection{Structural Bridging: The Utility of the SP Layer}
+As demonstrated in Chapter \ref{chp:proof}, the introduction of the \textbf{Structured Proof (SP)} layer served as a vital cognitive bridge.
+While SP is not a logical innovation per se, it acts as a diagnostic tool that decomposes "compressed" folklore arguments into granular steps.
+This methodology revealed that many "obvious" steps in the literature require non-trivial formal justification--specifically the measurability of the threshold $\alpha(x)$, a property consistently treated as implicit in pen-and-paper proofs.
+
+\subsection{Representation and Consistency: Permutations versus Sets}
+In Chapter \ref{chp:matching}, we encountered the challenge of bridging the \textbf{representation gap} between graph-theoretic permutations and set theoretic edge families.
+Formalizing this as an injective mapping was a critical lesson: the correctness of an algorithm depends not only on the logical steps but also on the consistency of data representations.
+Without a formal proof of injectivity, the probabilistic bounds could not be safely translated to the bipartite matching model.
+
+\subsection{The Hidden Burden of Rigor: Type Safety and Measurability}
+Finally, the reconciliation of type systems (specifically \texttt{nat} and \texttt{int}) and the requirement for measurability proofs provided a rigorous safety layer.
+While explicit type casting and measurability obligations added to the proof's complexity, they eliminated the risk of subtle errors.
+This underscores that in formal verification, there is no "minor detail", every element of reasoning must be subjected to the highest level of scrutiny.
+
+\section{Future Work and AFP Submission}
+The results of this project are currently being prepared for submission to the \textbf{Archive of Formal Proofs (AFP)}.
+As a curated collection of Isabelle/HOL developments, the AFP entry will provide a reusable library for the Isolation Lemma, enabling future researchers to verify more complex randomized data structures and algorithms based on the results submitted and archived.
+
+Future research could extend this work in several directions:
+\begin{itemize}
+    \item \textbf{Verification of Diverse RNC Problems:}
+    The algebraic approach used for Perfect Matching can be adapted to other problems in the \textbf{Randomized NC (RNC)} class.
+    For instance, the isolation principle is equally vital for parallel algorithms solving the \textit{Matrix Rank} or \textit{All-Pairs Shortest Paths} problems.
+    \item \textbf{Expanding the Randomized Algorithm Library}:
+    The current formalization can serve as a foundation for verifying other probabilistic building blocks, such as \textbf{Chernoff bounds} \cite{Mitzenmacher_Upfal_2005} or \textbf{Hashing lemmas} \cite{CARTER1979143}, creating a more comprehensive toolkit for randomized algorithm analysis in Isabelle/HOL.
+    \item \textbf{Application to Other Combinatorial Structures}:
+    While this work focuses on bipartite graphs, the same weighting logic can be tested on simpler combinatorial structures, such as spanning trees or specific subset-sum problems, to evaluate the lemma's versatility.
+    \item \textbf{Proof Automation for Probabilistic Reasoning}:
+    Future efforts could focus on developing specialized Isabelle strategies to automate tedious formalization tasks, such as measurability proofs and summation index-shifting, reducing the manual effort required for randomized proofs.
+\end{itemize}
+
+In conclusion, this work demonstrates that even subtle probabilistic arguments can be subjected to the highest level of logical scrutiny.
+By digitalizing these foundational results, we contribute to the ongoing effort of building a verified library of randomized algorithm theory.
+
