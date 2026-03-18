@@ -167,8 +167,8 @@ Removing $x$ from $A$ yields a residual set whose total weight equals $w(A) - w(
 Since $A \in \mathcal{F}$ and attains the minimum total weight among all sets in $\mathcal{F}$, any other set $S \in \mathcal{F}$ containing $x$ must have residual weight at least $w(A \setminus \{x\})$.
 Therefore, the least value selected by the second \texttt{LEAST} operator coincides with the concrete value $w(A \setminus \{x\})$.
 
-Together, these two observations eliminate both instances of the \texttt{LEAST} operator from the definition of $\alpha(x)$ whenever suitable minimizers are available.
-They reduce the abstract definition to a concrete arithmetic form that can be used directly in subsequent arguments.
+Together, these two observations show that both instances of the \texttt{LEAST} operator in the definition of $\alpha(x)$ can be eliminated whenever suitable minimizers are available.
+The resulting expression can then be used directly in subsequent arguments.
 
 \paragraph{FP.}
 These simplifications are formalized by the following auxiliary lemmas in Isabelle/HOL:
@@ -211,7 +211,7 @@ We now formulate this independence property as a formal lemma, which will serve 
 Then $\alpha(x)$ computed with respect to $w$ is equal to $\alpha(x)$ computed with respect to $w'$.}
 
 To prove this lemma, we compare the two definitions of $\alpha(x)$ under $w$ and $w'$.
-The core observation is that for any set $S \subseteq U$ with $x \notin S$, the total weight $wt\ w\ S$ depends only on values of $w$ on $S \subseteq U \setminus \{x\}$, and therefore equals $wt\ w' \S$.
+The core observation is that for any set $S \subseteq U$ with $x \notin S$, the total weight $w(S)$ depends only on the values of $w$ on $S \subseteq U \setminus \{x\}$, and therefore equals $w'(S)$.
 The same reasoning applies to residual sets of the form $S - \{x\}$, since $S - \{x\} \subseteq U \setminus \{x\}$.
 
 Using this congruence of weights, we show that the predicates appearing in the two \texttt{LEAST} expressions defining $\alpha(x)$ are equivalent under $w$ and $w'$.
@@ -228,7 +228,10 @@ and similarly for the residual term
 \]
 
 Therefore, the two \texttt{LEAST} values coincide under $w$ and $w'$.
-Unfolding the definition of $\alpha(x)$ then yields the desired conclusion of the lemma, namely $\alpha_w(x) = \alpha_{w'}(x)$.
+Unfolding the definition of $\alpha(x)$ then yields the desired conclusion:
+\[
+\alpha_w(x) = \alpha_{w'}(x).
+\]
 
 \paragraph{FP.}
 This lemma is formalized as \texttt{alpha\_independent\_of\_coord} in Isabelle/HOL:
@@ -303,69 +306,95 @@ Finally, the standard splitting identity $w(A) = w(A \setminus \{x\}) + w(x)$ is
 
 \paragraph{PP.}
 
-We now complete the proof of the Isolation Lemma by bounding the probability that the minimizer of $\mathcal{F}$ is not unique under a random weight assignment.
-Throughout this section, weights are sampled according to the product probability space constructed in Chapter~\ref{chp:modeling}.
-
-By the collision characterization established in Section~\ref{sec:collision}, the event that the minimizer is not unique can be reduced to a union of single-coordinate events, following the counting strategy established in the literature \cite{spencer1995probabilistic}:
+The probabilistic argument proceeds by reducing failure of uniqueness to a collection of single-coordinate collision events.
+By Section~\ref{sec:collision}, if the minimizer is not unique, then there exists some $x \in U$ such that
 \[
-\{\, \text{the minimizer is not unique} \,\}
-\subseteq
-\bigcup_{x \in U} \{\, w(x) = \alpha(x) \,\}.
+w(x) = \alpha(x).
 \]
-Thus, it suffices to bound the probability of each event $\{\, w(x) = \alpha(x) \,\}$.
+Hence it is enough to bound the probability of these collision events and then sum over all $x \in U$.
 
-Fix an arbitrary element $x \in U$.
-By the independence property proved in Section~\ref{sec:alpha_independence}, the auxiliary quantity $\alpha(x)$ depends only on the weights assigned to elements in $U \setminus \{x\}$.
-Consequently, once all other weights have been fixed, $\alpha(x)$ becomes a constant with respect to the remaining random choice of $w(x)$.
+For a fixed element $x$, the key observation is that $\alpha(x)$ depends only on the weights assigned to elements of $U \setminus \{x\}$, whereas $w(x)$ is chosen independently and uniformly from $\{1,\dots,N\}$.
+Thus the event $w(x)=\alpha(x)$ can occur with probability at most $1/N$.
 
-Under the product probability space, the random variable $w(x)$ is distributed uniformly over the finite set $\{1,\dots,N\}$ and is independent of all other coordinates.
-Therefore, the probability that $w(x)$ attains any particular value is exactly $1/N$, and in particular
-\[
-\Pr\bigl[\, w(x) = \alpha(x) \,\bigr] \le \frac{1}{N}.
-\]
-
-Since the universe $U$ is finite, we may apply the union bound:
+Applying the union bound over all $x \in U$ yields
 \[
 \Pr\bigl[\, \text{the minimizer is not unique} \,\bigr]
-\le \sum_{x \in U} \Pr\bigl[\, w(x) = \alpha(x) \,\bigr]
-\le \frac{|U|}{N}.
+\le \frac{|U|}{N},
 \]
-Equivalently, the probability that the minimizer is unique satisfies
+and therefore
 \[
 \Pr\bigl[\, \text{the minimizer is unique} \,\bigr]
 \ge 1 - \frac{|U|}{N}.
 \]
-This inequality constitutes the statement of the Isolation Lemma.
-
+This is the essential probabilistic idea behind the Isolation Lemma.
 
 \paragraph{SP.}
 
-The formal proof follows the same high-level structure as the pen-and-paper argument, but it must expose the proof obligations that are implicit informally.
-
-To obtain an explicit probability bound inside Isabelle/HOL, the event $\{\, w(x) = \alpha(x) \,\}$ is decomposed into a finite union over $k \in \{1,\dots,N\}$:
+Fix $x \in U$.
+To bound the event $\{\, w(x) = \alpha(x) \,\}$, we first decompose it according to the possible values of the coordinate $w(x)$:
 \[
 \{\, w(x) = \alpha(x) \,\}
 \;=\;
 \bigcup_{k=1}^{N} \{\, \alpha(x) = k \;\wedge\; w(x) = k \,\}.
 \]
-This technical decomposition allows the application of independence at the level of random variables together with uniform point-probability bounds.
+Since the union is finite, it suffices to bound the probability of each summand.
 
-To obtain a multiplicative bound on each summand, the independence between $w(x)$ and $\alpha(x)$ must be established at the level of random variables.
-This is achieved by exploiting the product structure of the underlying PMF.
-The restriction of a sample function to $\{x\}$ and to $U \setminus \{x\}$ yields two independent components.
-Since $w(x)$ depends only on the first component, while $\alpha(x)$ depends only on the second (by the independence-of-$\alpha$ lemma), their compositions are independent random variables.
-This yields
+Now fix $k \in \{1,\dots,N\}$.
+By Section~\ref{sec:alpha_independence}, the quantity $\alpha(x)$ depends only on the weights assigned to elements of $U \setminus \{x\}$.
+On the other hand, the random variable $w(x)$ depends only on the $x$-coordinate.
+Because the underlying distribution is a product probability space, these two random variables are independent.
+Hence
 \[
 \Pr[\, \alpha(x) = k \wedge w(x) = k \,]
 =
 \Pr[\, \alpha(x) = k \,] \cdot \Pr[\, w(x) = k \,].
 \]
 
-Finally, the construction of $\alpha(x)$ via minimum operators over finite families requires auxiliary measurability arguments.
-Finite sums of coordinates are shown to be measurable, predicates of the form
-$\exists S \in F.\; \cdots$ are measurable over the product space, and the resulting \texttt{LEAST} expressions preserve measurability.
-These facts ensure that all events appearing in the above decomposition are measurable and that the standard independence and union-bound lemmas can be applied without further side conditions.
+To justify this factorization, we verify that the relevant random variables and events are measurable.
+This requires showing that finite sums of coordinates are measurable, that predicates of the form
+$\exists S \in F.\; \cdots$ define measurable sets, and that the \texttt{LEAST}-based construction of $\alpha(x)$ preserves measurability.
+Once these facts are established, the standard independence lemmas of Isabelle/HOL apply.
 
+Since $w(x)$ is uniformly distributed on $\{1,\dots,N\}$, we have
+\[
+\Pr[\, w(x) = k \,] = \frac{1}{N}
+\qquad\text{for each } k \in \{1,\dots,N\}.
+\]
+Therefore,
+\[
+\Pr[\, \alpha(x) = k \wedge w(x) = k \,]
+=
+\Pr[\, \alpha(x) = k \,] \cdot \frac{1}{N}.
+\]
+
+Summing over all $k \in \{1,\dots,N\}$ and using
+\[
+\sum_{k=1}^N \Pr[\, \alpha(x)=k \,] \le 1,
+\]
+we obtain
+\[
+\Pr[\, w(x) = \alpha(x) \,]
+\le \frac{1}{N}.
+\]
+
+Finally, by Section~\ref{sec:collision},
+\[
+\{\, \text{the minimizer is not unique} \,\}
+\subseteq
+\bigcup_{x \in U} \{\, w(x) = \alpha(x) \,\}.
+\]
+Applying the union bound over the finite set $U$, we obtain
+\[
+\Pr\bigl[\, \text{the minimizer is not unique} \,\bigr]
+\le \sum_{x \in U} \Pr[\, w(x) = \alpha(x) \,]
+\le \frac{|U|}{N}.
+\]
+Equivalently,
+\[
+\Pr\bigl[\, \text{the minimizer is unique} \,\bigr]
+\ge 1 - \frac{|U|}{N},
+\]
+which is exactly the desired statement of the Isolation Lemma.
 \paragraph{FP.}
 
 In Isabelle/HOL, the above structural steps are realized by the following core lemmas and theorems:
@@ -390,8 +419,8 @@ measure_pmf.prob (w_pmf N U) {w. w x = k} = 1 / real N
 \medskip
 
 \noindent
-\textbf{(b) Measurability lemmas (measurability of $\alpha$).}
-To legitimately apply probabilistic reasoning, we must show that the auxiliary quantity $\alpha(x)$ is a measurable random variable. The formalization culminates in:
+\textbf{(b) Measurability of $\alpha(x)$.}
+To apply probabilistic reasoning inside Isabelle/HOL, we must show that the auxiliary quantity $\alpha(x)$ is measurable. This is captured by:
 \begin{lstlisting}[language=Isabelle, caption={Measurability of Alpha}]
 lemma alpha_measurable:
   assumes "finite U" "F \subseteq Pow U" "x \in U"
@@ -405,7 +434,7 @@ This proof relies on measurability of finite sums, measurability of finite exist
 
 \noindent
 \textbf{(c) Independence lemma.}
-Next, we lift coordinate-wise independence to random-variable independence by showing that $w(x)$ is independent of $\alpha(x)$, which depends only on the remaining coordinates:
+Next, we lift coordinate-wise independence to the level of random variables by showing that $w(x)$ is independent of $\alpha(x)$, since the latter depends only on the remaining coordinates:
 \begin{lstlisting}[language=Isabelle, caption={Independence of Coordinate and Alpha}]
 prob_space.indep_var (measure_pmf (w_pmf N U))
   (count_space UNIV) (\lambdaw. w x)
@@ -429,12 +458,15 @@ theorem isolation_lemma_main:
 
 This theorem completes the formal derivation from the structural collision event to the global lower bound on the probability of uniqueness.
 
-Taken together, these lemmas bridge the gap between the informal probabilistic argument and its fully formal counterpart.
-They make explicit the two technical ingredients that are implicit in pen-and-paper proofs: the measurability of $\alpha(x)$ and its independence from the coordinate $w(x)$.
-With these in place, the Isolation Lemma follows directly by applying the union bound inside Isabelle/HOL's probability framework.
+Taken together, these lemmas provide the formal probabilistic infrastructure needed for the final argument.
+With measurability and independence established explicitly in Isabelle/HOL, the Isolation Lemma follows by combining the single-coordinate bound with the union bound.
 
 \section{Chapter Summary}
-In this chapter, we presented a fully formal proof of the Isolation Lemma in Isabelle/HOL, by systematically refining a classical proof into structured proof steps and finally machine-checked Isabelle/HOL code.
+In this chapter, we presented a fully formal proof of the Isolation Lemma in Isabelle/HOL, by systematically refining a classical proof into structured proof steps and finally machine-checked formal Isabelle/HOL code.
 We reformulated non-uniqueness as the existence of two distinct minimizers, introduced the auxiliary quantity $\alpha(x)$, and showed how it captures the precise collision event responsible for ties.
-A key technical ingredient is showing that that $\alpha(x)$ is independent of the individual weight $w(x)$, which enables a reduction to single-coordinate probabilistic events.
-Finally, by establishing measurability, independence, and a uniform point probability bound within a product probability space, we derived the standard $1 - |U|/N$ uniqueness bound in a fully mechanized manner.
+A key technical step was to prove that $\alpha(x)$ is independent of the individual weight $w(x)$, allowing the argument to reduce to single-coordinate probabilistic events.
+Combining this with the probabilistic machinery developed over the product probability space, we derived the standard lower bound
+\[
+1 - \frac{|U|}{N}
+\]
+for the probability that the minimizer is unique.

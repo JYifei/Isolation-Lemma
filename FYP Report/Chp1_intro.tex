@@ -5,7 +5,7 @@ Randomization has become one of the central paradigms of modern theoretical comp
 Over the past few decades, randomized methods have shaped the design and analysis of algorithms, yielding constructions that are simpler, faster, or in some settings seemingly out of reach for known deterministic techniques.
 
 At the heart of randomized algorithms lies a collection of probabilistic lemmas that explain why randomness enforces useful structural properties -- for instance, why a random perturbation can isolate a unique optimum among many candidates.
-These lemmas are routinely invoked across areas such as parallel computation, combinatorial optimization and matching.
+These lemmas are routinely invoked across areas such as parallel computation, combinatorial optimization, and matching.
 
 However, the proofs of such lemmas are often developed as pen-and-paper arguments, or circulate as folklore-style proofs that compress multiple layers of reasoning into a few lines.
 In these presentations, assumptions about probability spaces, measurability, independence, and minimization are commonly treated implicitly, and intermediate steps are omitted.
@@ -18,9 +18,10 @@ By requiring definitions and proof steps to be stated explicitly and checked mec
 Recent developments demonstrate that such mechanization can scale to nontrivial randomized algorithm analyses, for example by formally verifying the CVM distinct-elements streaming algorithm in Isabelle/HOL using functional probabilistic invariants to derive concentration bounds~\cite{karayeletal2025CVM}.
 Moreover, the resulting formal developments can serve as reusable digital building blocks, contributing to the broader effort of digitalizing mathematics and enabling human--AI collaboration in formal reasoning.
 
-This report contributes to the formal verification of probabilistic reasoning in TCS by formalizing the \emph{Isolation Lemma} in Isabelle/HOL.
-The Isolation Lemma is a key tool that assigns random weights to enforce, with high probability, a unique minimum-weight solution structure; it is notably used in randomized algorithms for the \textbf{Perfect Matching} problem.
-Our formalization makes the underlying probability space and all dependencies explicit, and we further apply the lemma to support the verification of a randomized perfect matching algorithm. 
+This report contributes to the formal verification of probabilistic reasoning in TCS by presenting, to the best of our knowledge, the first formalization of the \emph{Isolation Lemma} in Isabelle/HOL.
+The Isolation Lemma is a key probabilistic tool for enforcing, with high probability, a unique minimum-weight solution structure under random weight assignments, and it plays an important role in randomized algorithms for the \textbf{Perfect Matching} problem.
+While the algorithmic application of the Isolation Lemma to perfect matching is not original to this report, the contribution here lies in its mechanized formalization and in the machine-checked correctness argument for a randomized parallel algorithm whose analysis relies on the lemma.
+Our development makes the underlying probability spaces, independence assumptions, and uniqueness arguments fully explicit and machine-checkable.
 
 \section{Background}
 \subsection{Randomized Algorithms in TCS}
@@ -53,7 +54,7 @@ Beyond individual correctness guarantees, ITP also contributes to the digitaliza
 Formal developments can be stored, reused, and extended, enabling large-scale collaboration and incremental verification across research communities.
 This shift supports new forms of human--computer and human--AI collaboration in mathematics and theoretical computer science.
 
-In recent years, formalized methods have been successfully applied across many areas in computer science, including program verification, compiler correctness \cite{leroy2009compcert}, and the formalization of foundational mathematical theories \cite{Gonthier2005ACP}.
+In recent years, formalized methods have been successfully applied across many areas in computer science, including program verification, compiler correctness \cite{leroy2009compcert}, and the formalization of foundational mathematical theories \cite{gonthier2005fourcolour}.
 Within theoretical computer science, formal verification has gradually expanded from classical mathematical results to core theorems in algorithm theory and computational complexity.
 
 However, the formal verification of randomized algorithms poses additional challenges.
@@ -73,10 +74,8 @@ Specifically, this project aims to:
 \begin{itemize}
     \item formalize random weight functions together with their corresponding product probability spaces, thereby making probabilistic assumptions explicit;
     \item provide a complete machine-checked proof of the Isolation Lemma, including an explicit upper bound on the probability of non-uniqueness and a precise characterization of failure conditions;
-    \item apply the formalized lemma to the correctness analysis of randomized algorithms, supporting higher-level algorithmic reasoning.
+    \item apply the formalized lemma within a machine-checked correctness argument for a randomized parallel algorithm for the \textbf{Perfect Matching} problem.
 \end{itemize}
-
-As a concrete application, the Isolation Lemma is used to formally verify a key probabilistic argument in a randomized algorithm for the \textbf{Perfect Matching} problem.
 
 \section{Scope of Work}
 The scope of this project is focused on theoretical formalization and proof construction within the Isabelle/HOL framework.
@@ -85,7 +84,7 @@ In particular, this report covers:
     \item the mathematical formulation of the Isolation Lemma and its formal expression;
     \item the probabilistic modeling of random weight assignments and their associated properties;
     \item the formalization of key combinatorial and probabilistic arguments appearing in the proof;
-    \item a representative application of the lemma to the \textbf{Perfect Matching} problem.
+    \item the machine-checked correctness argument for a randomized parallel algorithm for the \textbf{Perfect Matching} problem based on the formalized Isolation Lemma.
 \end{itemize}
 
 This work does not address general derandomization techniques for randomized algorithms, nor does it consider implementation-level concerns or performance optimization.
@@ -104,7 +103,7 @@ It describes how the combinatorial and probabilistic structures underlying the I
 Chapter 4 (Proof) contains the core formalization of the Isolation Lemma.
 The development is organized using a PP/SP/FP structure -- corresponding to pen-and-paper proofs (PP), structured proofs (SP), and fully formal proofs (FP) -- which is carefully motivated and employed to connect informal probabilistic intuition, precise formal statements, and fully machine-checked formal verification.
 
-Chapter 5 (Perfect Matching) applies the formalized Isolation Lemma to the verification of a randomized algorithm for the Perfect Matching problem.
-This chapter focuses on the high-level integration of the lemma into algorithmic reasoning.
+Chapter 5 (Perfect Matching) applies the formalized Isolation Lemma within a machine-checked correctness argument for a randomized parallel algorithm for the Perfect Matching problem.
+Its emphasis is on making explicit how the formalized Isolation Lemma connects the key structural characterization to the final probabilistic correctness argument, rather than on reintroducing the broader algorithmic background.
 
 Finally, Chapter 6 (Conclusion) summarizes the main contributions of the report and discusses possible directions for future work.
