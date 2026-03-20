@@ -1,10 +1,10 @@
 \chapter{Formal Modeling of the Isolation Lemma}
 \label{chp:modeling}
 
-This chapter marks the first step in the formalization process by translating the core components of the Isolation Lemma into rigorous definitions with the Isabelle/HOL theorem proving environment.
-Building on the informal statement of the lemma provided in Chapter~`'\ref{chp:prelims}, our objective here is to move from intuitive, pen-and-paper reasoning to a precise and structured formal model.
+This chapter marks the first step in the formalization process by translating the core components of the Isolation Lemma into rigorous definitions within the Isabelle/HOL theorem proving environment.
+Building on the informal statement of the lemma provided in Chapter~\ref{chp:prelims}, our objective here is to move from intuitive, pen-and-paper reasoning to a precise and structured formal model.
 This transition corresponds to the intermediate stage in the formalization pipeline:
-from Pen-and-Paper Proofs (PP) to a Formal Proof (FP) representation that is machine-readable and logically well-formed, but not yet fully proved.
+from Pen-and-Paper Proofs (PP) to a fully formal representation in Isabelle/HOL, in which all objects are precisely defined and machine-readable, but where the main correctness results are not yet established.
 
 We proceed by constructing the essential components of the lemma layer by layer.
 First, we define the underlying universe of the elements and the weight functions, and explain the rationale of choosing natural numbers for weight representation.
@@ -137,9 +137,13 @@ This reformulation enables case-based reasoning in the formal proof, where fixed
 \label{sec:alpha_construction}
 
 The crux of the Isolation Lemma relies on a specific value associated with each element $x$, commonly denoted as $\alpha(x)$.
-Originally introduced by Mulmuley et al. this quantity provides an intuitive threshold that governs whether $x$ contributes to a minimum-weight set.
-From an informal perspective, $\alpha(x)$ reflect how sensitive the total weight is to the choice of $w(x)$.
+Originally introduced by Mulmuley et al., this quantity provides an intuitive threshold that governs whether $x$ contributes to a minimum-weight set.
+From an informal perspective, $\alpha(x)$ reflects how sensitive the total weight is to the choice of $w(x)$.
 Our goal in this section is to move from this intuition toward a formal expression that supports explicit reasoning in the proof assistant.
+
+The formal definition of $\alpha(x)$ is structured to capture the marginal role of the element $x$ within the set system $\mathcal{F}$. 
+By partitioning the family into subsets that contain $x$ and those that do not, the two minimization terms separately encode the weight thresholds for these two disjoint cases. 
+This construction is designed so that the contribution of $x$ can be analyzed without directly depending on the sampled value of $w(x)$ itself, a point that becomes essential in the later probabilistic argument.
 
 Mathematically, $\alpha(x)$ is defined as the difference between two minimum values:
 \begin{equation}

@@ -2,7 +2,7 @@
 \label{chp:conclusion}
 
 \section{Summary of Research Achievements}
-This report has presented a machine-checked formalization of the Isolation Lemma in Isabelle/HOL, together with its application within a machine-checked correctness argument for a randomized parallel algorithm for the Perfect Matching problem.
+This report has presented a machine-checked formalization of the Isolation Lemma in Isabelle/HOL, together with its application within a two-stage machine-checked correctness argument for a randomized parallel algorithm for the Perfect Matching problem.
 By navigating the transition from pen-and-paper probabilistic intuition to formal, machine-checked reasoning, we have established a rigorous foundation for formalizing and verifying randomized algorithmic arguments.
 
 The primary contributions of this work are:
@@ -23,28 +23,34 @@ The formalization of the Isolation Lemma and its application to the Perfect Matc
 \subsection{Making Randomness Explicit in Isabelle/HOL}
 A primary methodological lesson from this development is that randomness could not be treated as an implicit background assumption.
 Instead, the random weight assignment itself had to be represented explicitly within the formal system.
-In classical RNC analysis, probabilistic intuition often leaves dependencies and structural assumptions in the background.
-In our case, this meant that the distribution of edge or element weights, the associated product probability space, and the event of having a unique minimum-weight solution all had to be specified formally inside the formal development.
+In particular, in standard presentations of the Isolation Lemma, the independence of weight assignments and the structure of the underlying probability space are typically assumed without explicit construction.
+In our case, this meant that the distribution of edge or element weights, the associated product probability space, and the event of having a unique minimum-weight solution all had to be specified formally inside the development, since none of these could be treated implicitly without breaking the chain of machine-checked reasoning.
 
 Using the \texttt{Pi\_pmf} framework, we modeled independent random weight assignments in a form that supported later reasoning about independence, measurability, and probability bounds.
-The key lesson is that in a proof assistant, this probabilistic infrastructure had to be built early enough to support the later theorem, rather than remaining as informal background intuition.
+The key lesson is that in a proof assistant, this probabilistic infrastructure must be constructed explicitly and early, since later arguments (such as uniqueness and probability bounds) depend critically on these definitions being available in a machine-checkable form.
 
 \subsection{The Role of the Structured Proof Layer}
 A second methodological lesson was that the \textbf{Structured Proof (SP)} layer served as a useful bridge between informal intuition and fully formal proof development.
 While SP is not itself a logical innovation, it acts as a diagnostic tool that decomposes compressed folklore-style arguments into explicit intermediate steps.
 This methodology revealed that many steps treated as obvious in the literature require non-trivial formal justification, particularly the measurability of the threshold $\alpha(x)$, which is typically left implicit in pen-and-paper presentations.
+This was particularly evident in the need to establish measurability properties (such as for $\alpha(x)$), which emerged as non-trivial obligations rather than routine steps.
 
 \subsection{Consistency of Representations}
 In Chapter~\ref{chp:matching}, we encountered a representation gap between graph-theoretic permutations and set-theoretic edge families.
 Formalizing this connection as an injective mapping was a critical part of the development.
 It showed that the correctness of an algorithm depends not only on the logical steps of the argument, but also on the consistency of data representations used across different formal settings.
-Without a formal proof of injectivity, the probabilistic guarantees could not be safely translated to the bipartite matching model.
+Without a formal proof of injectivity, the probabilistic guarantees could not be transferred to the bipartite matching model, effectively blocking the correctness argument.
 
 \subsection{Type Safety and Measurability Obligations}
 A final methodological lesson concerns the additional burden of rigor imposed by type safety and measurability obligations.
 In particular, reconciling the types \texttt{nat} and \texttt{int}, while also discharging explicit measurability proofs, added substantial formal overhead to the development.
 While explicit coercions, type conversions, and measurability obligations increased the proof burden, they also eliminated classes of subtle errors that would have remained hidden in an informal proof.
-This underscores that in formal verification there are no genuinely minor details: every part of the argument must be made explicit and checked against the logical framework.
+This illustrates that seemingly low-level issues, such as type coercions and measurability conditions, can become structurally necessary components of the proof rather than incidental technicalities.
+
+\paragraph{Summary.}
+Taken together, these observations show that the formalization of the Isolation Lemma is not merely a transition of an existing argument into Isabelle/HOL, but a refinement of its logical structure.
+Several aspects of the argument that appear straightforward in informal presentations-such as independence assumptions, measurability conditions, and representation consistency-become explicit proof obligations in the formal setting.
+This suggests that formal verification does not only increase rigor, but can also clarify the underlying structure of randomized algorithms by exposing hidden dependencies and implicit assumptions.
 
 \section{Reflections on Formal Methods in an Independent Research Context}
 
@@ -62,17 +68,20 @@ However, working through the formalization made it clear that the proof assistan
 
 Instead, it forces a re-examination of definitions, assumptions, and proof dependencies at every stage.
 In this respect, learning Isabelle/HOL and formal mathematics in an independent research context was not separate from the research itself, but became one of the means through which the underlying mathematics was more fully understood.
+This shift suggest that engaging with a proof assistant does not merely formalize understanding, but actively reshapes what it means to understand a mathematical argument.
 
 \subsection{From Following Proofs to Reconstructing Proofs}
 
 A second reflection concerns the distinction between following an informal proof and reconstructing it in a formal setting.
 Before undertaking the formalization, it was easy to regard a proof as understood once its main argument and overall intuition were clear.
-The experience of formalization showed that this standard is often insufficient.
+The experience of formalization showed that this standard is often insufficient for establishing full correctness.
 
 Many steps that appear routine in pen-and-paper presentations depend on side conditions, representational choices, or intermediate facts that remain unstated unless one is forced to supply them explicitly.
 This was particularly evident in the treatment of probabilistic constructions, measurability conditions, and the transfer between different representations of the same mathematical object.
 
 The project therefore sharpened the distinction between intuitive understanding and fully articulated understanding: to formalize a proof is not simply to restate it more rigorously, but to reconstruct the structure that makes each step valid.
+More importantly, it suggest that formalization can play a role in the development of theoretical results themselves, by making hidden assumptions visible and forcing a more robust formulation of arguments.
+
 
 \subsection{Implications for Future Theoretical Research}
 
@@ -95,10 +104,10 @@ Future research could extend this work in several directions:
     A natural next step is to extend the present development to other algorithmic settings that follow the same proof pattern, namely using random weighting to isolate a unique combinatorial object from a larger family of candidates.
     Besides bipartite perfect matching, promising examples include isolation-based counting or witness-extraction arguments for subset families, where uniqueness is used to reduce a large solution space to a single distinguished object with high probability \cite{mulmuley1987matching,chari1995isolation}.
     \item \textbf{Application to Other Combinatorial Structures}:
-    Beyond bipartite perfect matchings, it would be valuable to investigate how readily the current Isabelle/HOL formalization transfers to other combinatorial families in which weighted subsets are used to distinguish a unique optimum.
+    Beyond bipartite perfect matchings, it would be valuable to investigate how readily the current Isabelle/HOL formalization-particularly the representation of weighted subsets, the probabilistic framework based on \texttt{Pi\_pmf}, and the unique argument-transfers to other combinatorial families in which weighted subsets are used to distinguish a unique optimum.
     Possible candidates include spanning-tree-type families or other subset-based structures, where the main question is not merely whether isolation holds abstractly, but how much of the present Isabelle/HOL infrastructure can be reused with only limited redesign.
     \item \textbf{Proof Automation for Probabilistic Reasoning}:
-    Future efforts could also investigate better automation support for recurring proof obligations in randomized arguments, such as measurability conditions, summation manipulations, and routine divisibility reasoning.
+    Future efforts could also investigate better automation support for recurring proof obligations encountered in this development, such as measurability conditions, summation manipulations, and routine divisibility reasoning.
     This would reduce the manual effort required to formalize probabilistic proofs of the kind studied in this report.
 \end{itemize}
 

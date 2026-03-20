@@ -22,7 +22,6 @@ By contrast, the construction version is more difficult in a parallel setting, s
 This difficulty is amplified by the presence of many symmetric perfect matchings.
 Without a mechanism for selecting a single distinguished solution, parallel local decisions may fail to assemble into one global matching.
 
-
 \section{Algebraic Modeling via the Tutte/Edmonds Matrix}
 \label{sec:tutte_matrix}
 
@@ -96,8 +95,11 @@ This global invariant will later serve as the basis for the edge-wise extraction
 
 \subsection{The Non-Cancellation Principle}
 In the Leibniz expansion of $\det(D)$, each perfect matching $p$ contributes a term of the form $\text{sgn}(p) \cdot 2^{weight(p)}$.
-A potential concern in this algebraic sum is that terms with opposite signs might cancel each other out.
-However, because the weights are stored as exponents of 2, the term with the smallest exponent cannot be eliminated by summing terms whose exponents are all strictly larger.
+The recovery of the minimum weight $W_0$ from this expansion relies crucially on uniqueness.
+If several perfect matchings attain the same minimum weight $W_0$, then the coefficient of $2^{W_0}$ becomes a signed sum over all such matchings, and this sum may vanish by cancellation.
+In that case, the minimum weight can no longer be identified through the 2-adic multiplicity of the determinant.
+By contrast, if the minimum-weight perfect matching is unique, its contribution survives as a single non-zero term, and no term of higher weight can cancel it.
+This is exactly why the uniqueness guarantee provided by the Isolation Lemma is essential for the weight-to-multiplicity argument.
 
 Formally, if $W_0$ is the unique minimum weight, $\det(D)$ can be expressed as:
 \begin{equation}
@@ -237,10 +239,20 @@ The key interface theorem is the lemma \texttt{pm\_iso\_equivalence}.
 It identifies the graph-theoretic uniqueness condition required by the extraction argument with the abstract predicate \texttt{has\_unique\_minimizer} used in Chapter~\ref{chp:proof}.
 This equivalence is what allows the general Isolation Lemma to be lifted to the specific case of bipartite perfect matchings.
 
-The theorem \texttt{isolation\_lemma\_for\_perfect\_matching} provides the machine-checked lower bound on the success probability:
+\begin{lstlisting}[language=Isabelle, caption={Equivalence between perfect-matching uniqueness and the abstract minimizer predicate}]
+lemma pm_iso_equivalence:
+  assumes "E <= {0..<n} * {0..<n}"
+  shows
+    "{w. unique_min_weight_condition (\lambda u v. w (u,v)) E}
+     =
+     {w. has_unique_minimizer
+           {p. is_perfect_matching p}
+           (weight_fun E (\lambda u v. w (u,v)))}"
+\end{lstlisting}
 
-\begin{lstlisting}[language=Isabelle, 
-    caption={Isolation Lemma for Perfect Matching}]
+The theorem \texttt{isolation\_lemma\_for\_perfect\_matching} provides the machine-checked lower bound on the success probability of the isolation step:
+
+\begin{lstlisting}[language=Isabelle, caption={Isolation Lemma instantiated for Perfect Matching}]
 theorem isolation_lemma_for_perfect_matching:
   fixes N :: nat
   assumes "N >= 1"
@@ -253,10 +265,36 @@ theorem isolation_lemma_for_perfect_matching:
 
 This theorem shows that, for a graph with edge set $E$ and edge weights chosen uniformly from $\{1, \dots, N\}$, the event that a unique minimum-weight perfect matching exists has probability at least $1 - |E|/N$.
 
-Combining this isolation guarantee with the extraction theorem of Section~\ref{sec:edge_extraction}, we obtain the final probabilistic correctness argument for the randomized parallel algorithm.
-With probability at least $1 - |E|/N$, random weighting isolates a unique minimum-weight perfect matching.
-Under this condition, the minor-based edge test reconstructs exactly that matching in parallel.
-Thus the formalized Isolation Lemma provides the probabilistic justification of the uniqueness premise that completes the machine-checked correctness argument of the perfect-matching application.
+However, this isolation statement alone is not yet the final algorithmic correctness result.
+The extraction theorem from Section~5.4 shows only that \emph{if} a unique minimum-weight perfect matching exists, then the minor-based edge test reconstructs it correctly.
+To obtain the full randomized correctness statement required for the algorithm, we must combine these two results into a single end-to-end theorem.
+
+We therefore prove the following final correctness theorem:
+
+\begin{lstlisting}[language=Isabelle, caption={End-to-end high-probability correctness of edge extraction}]
+theorem edge_test_recovers_with_high_probability:
+  fixes N :: nat
+  assumes N_ge_1: "N >= 1"
+  assumes PM_exists: "EX p. bipartite_graph.is_perfect_matching n E p"
+  assumes E_bounds: "E <= {0..<n} * {0..<n}"
+  shows
+    "measure_pmf.prob (w_pmf N E)
+      {w. edge_test_recovers_matching n E w}
+     >= 1 - real (card E) / real N"
+\end{lstlisting}
+
+The proof of this final theorem follows the logical structure of the development in the previous two sections.
+Section~5.4 established a conditional correctness result: whenever the random weight assignment produces a unique minimum-weight perfect matching, the minor-based edge test recovers exactly that matching.
+Section~5.5 then showed, via the Isolation Lemma, that this uniqueness event occurs with probability at least $1 - |E|/N$.
+
+The theorem above combines these two ingredients into a single probabilistic correctness statement for the randomized parallel matching procedure.
+In other words, the algorithm is correct for every weight assignment satisfying the uniqueness condition, and the Isolation Lemma guarantees that such weight assignments occur with probability at least $1 - |E|/N$.
+
+This gives exactly the desired statement that, with probability at least $1 - |E|/N$, the algorithm is correct.
+Equivalently, the probability of failure is at most $|E|/N$.
+This is precisely a Monte Carlo-style correctness bound: the random weighting isolates a unique minimum-weight perfect matching with high probability, and the parallel edge test then recovers precisely that matching.
+Hence the connection between the isolation argument and the extraction argument is not merely informal; it is captured by a final machine-checked theorem.
+
 
 \section{Chapter Summary}
 \label{sec:matching_summary}

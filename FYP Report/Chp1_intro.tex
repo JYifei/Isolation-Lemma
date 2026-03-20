@@ -18,9 +18,11 @@ By requiring definitions and proof steps to be stated explicitly and checked mec
 Recent developments demonstrate that such mechanization can scale to nontrivial randomized algorithm analyses, for example by formally verifying the CVM distinct-elements streaming algorithm in Isabelle/HOL using functional probabilistic invariants to derive concentration bounds~\cite{karayeletal2025CVM}.
 Moreover, the resulting formal developments can serve as reusable digital building blocks, contributing to the broader effort of digitalizing mathematics and enabling human--AI collaboration in formal reasoning.
 
-This report contributes to the formal verification of probabilistic reasoning in TCS by presenting, to the best of our knowledge, the first formalization of the \emph{Isolation Lemma} in Isabelle/HOL.
+This report contributes to the formal verification of probabilistic reasoning in TCS by presenting by addressing a gap in the current literature:
+to the best of our knowledge, the \emph{Isolation Lemma} itself has not previously been formalized in Isabelle/HOL.
 The Isolation Lemma is a key probabilistic tool for enforcing, with high probability, a unique minimum-weight solution structure under random weight assignments, and it plays an important role in randomized algorithms for the \textbf{Perfect Matching} problem.
-While the algorithmic application of the Isolation Lemma to perfect matching is not original to this report, the contribution here lies in its mechanized formalization and in the machine-checked correctness argument for a randomized parallel algorithm whose analysis relies on the lemma.
+While the algorithmic application of the Isolation Lemma to perfect matching is not original to this report, the contribution here lies in its mechanized formalization and in a two-stage machine-checked correctness argument for a randomized parallel algorithm:
+first, a conditional correctness argument showing that the unique minimum-weight perfect matching can be recovered by algebraic tests, and second, a probabilistic justification of that uniqueness premise via the formalized Isolation Lemma.
 Our development makes the underlying probability spaces, independence assumptions, and uniqueness arguments fully explicit and machine-checkable.
 
 \section{Background}
@@ -74,7 +76,7 @@ Specifically, this project aims to:
 \begin{itemize}
     \item formalize random weight functions together with their corresponding product probability spaces, thereby making probabilistic assumptions explicit;
     \item provide a complete machine-checked proof of the Isolation Lemma, including an explicit upper bound on the probability of non-uniqueness and a precise characterization of failure conditions;
-    \item apply the formalized lemma within a machine-checked correctness argument for a randomized parallel algorithm for the \textbf{Perfect Matching} problem.
+    \item apply the formalized lemma within a machine-checked correctness argument for a randomized parallel algorithm for the Perfect Matching problem.
 \end{itemize}
 
 \section{Scope of Work}
@@ -84,10 +86,11 @@ In particular, this report covers:
     \item the mathematical formulation of the Isolation Lemma and its formal expression;
     \item the probabilistic modeling of random weight assignments and their associated properties;
     \item the formalization of key combinatorial and probabilistic arguments appearing in the proof;
-    \item the machine-checked correctness argument for a randomized parallel algorithm for the \textbf{Perfect Matching} problem based on the formalized Isolation Lemma.
+    \item a two-stage machine-checked correctness argument for a randomized parallel algorithm for the \textbf{Perfect Matching} problem, consisting of a conditional correctness proof for the edge extraction and a probabilistic correctness guarantee derived from the formalized Isolation Lemma.
 \end{itemize}
 
 This work does not address general derandomization techniques for randomized algorithms, nor does it consider implementation-level concerns or performance optimization.
+Importantly, while the Isolation Lemma is classically associated with randomized parallel approaches to the Perfect Matching problem, the scope of this formalization is strictly limited to verifying the logical and probabilistic correctness of the isolation step, rather than formalizing complexity classes or proving complexity-theoretic upper bounds inside Isabelle/HOL.
 Moreover, the internal implementation details of the Isabelle/HOL system and its underlying logical foundations are beyond the scope of this report.
 
 \section{Report Outline}
@@ -103,7 +106,8 @@ It describes how the combinatorial and probabilistic structures underlying the I
 Chapter 4 (Proof) contains the core formalization of the Isolation Lemma.
 The development is organized using a PP/SP/FP structure -- corresponding to pen-and-paper proofs (PP), structured proofs (SP), and fully formal proofs (FP) -- which is carefully motivated and employed to connect informal probabilistic intuition, precise formal statements, and fully machine-checked formal verification.
 
-Chapter 5 (Perfect Matching) applies the formalized Isolation Lemma within a machine-checked correctness argument for a randomized parallel algorithm for the Perfect Matching problem.
-Its emphasis is on making explicit how the formalized Isolation Lemma connects the key structural characterization to the final probabilistic correctness argument, rather than on reintroducing the broader algorithmic background.
+Chapter 5 (Perfect Matching) develops a two-stage machine-checked correctness argument for a randomized parallel algorithm for the Perfect Matching problem.
+It first establishes a conditional correctness result showing how a unique minimum-weight perfect matching can be recovered by algebraic edge tests, and then applies the formalized Isolation Lemma to justify this uniqueness premise with high probability.
+Its emphasis is on making explicit how these two parts combine into the final probabilistic correctness argument, rather than on reintroducing the broader algorithmic background.
 
 Finally, Chapter 6 (Conclusion) summarizes the main contributions of the report and discusses possible directions for future work.

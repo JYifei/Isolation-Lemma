@@ -1,8 +1,8 @@
 \chapter{Preliminaries}
 \label{chp:prelims}
 
-Before turning to the formal development of the Isolation Lemma, we briefly review the proof environment in which our formalization is carried out.
-This chapter introduces the basic ideas of interactive theorem proving and the Isabelle/HOL system, which together provide the logical and computational framework for the results developed in later chapters.
+Before turning to the formal development of the Isolation Lemma, we briefly review the background needed for the results developed in later chapters.
+This chapter introduces the proof environment of interactive theorem proving and Isabelle/HOL, together with the mathematical, algorithmic, and contextual background relevant to the Isolation Lemma and its application to the \textbf{Perfect Matching} problem.
 The material presented here is purely preparatory and does not constitute original contributions.
 
 \section{Interactive Theorem Proving}
@@ -193,7 +193,7 @@ When multiple minimum-weight perfect matchings coexist, algorithmic tests intend
 The Isolation Lemma resolves this difficulty by guaranteeing, with high probability, the uniqueness of the minimum-weight perfect matching after random perturbation.
 This uniqueness allows the algorithm to treat one matching as a distinguished object, thereby removing ambiguity caused by the presence of many symmetric solutions.
 
-Accordingly, such algorithms rely on isolation as a probabilistic precondition and derive correctness from the consequences of uniqueness, rather than from the particular mechanism by which the isolation is obtained.
+Accordingly, in such algorithms the role of isolation is to provide a distinguished minimum-weight solution with high probability, thereby reducing the ambiguity caused by symmetry and making subsequent algorithmic reasoning possible.
 
 \section{Related Work}
 
@@ -224,16 +224,17 @@ Lean is widely used for large-scale formalized mathematics; Isabelle/HOL provide
 Associated large-scale formal libraries and archives include Lean's \textit{mathlib} and the Isabelle Archive of Formal Proofs (AFP) \cite{mathlib, afp}.
 
 Within this broader landscape, Isabelle/HOL and the AFP are particularly relevant to the present report.
-The Isabelle/HOL environment provides a mature logical framework for higher-order reasoning, while its probability library supports explicit formalizations of measure spaces, random variables, and probabilistic constructions \cite{nipkow2002isabelle,isabelleprob}.
+The Isabelle/HOL environment provides a mature logical framework for higher-order reasoning \cite{nipkow2002isabelle}, while its probability library supports formalizations of measure spaces, random variables, and probabilistic constructions \cite{isabelleprob}. 
+Related AFP developments further demonstrate how these probabilistic foundations can be used to formalize randomized algorithms and probabilistic arguments \cite{Executable_Randomized_Algorithms-AFP}.
 More generally, the long-term vision of formalized mathematics as a reusable digital body of verified knowledge has been articulated since the QED manifesto \cite{qed1994}, and has since been realized in major verification efforts ranging from compiler correctness to large formal proofs in mathematics \cite{leroy2009compcert,gonthier2005fourcolour}.
 
 More closely related to this report are recent formal developments showing that proof assistants can already support substantial randomized and algebraic reasoning in TCS.
 For example, the AFP entry on the Schwartz--Zippel lemma formalizes a central probabilistic tool for polynomial identity testing and includes a perfect-matching-related application in bipartite graphs \cite{Schwartz_Zippel-AFP}.
 The AFP entry on executable randomized algorithms further demonstrates that randomized procedures can be reasoned about formally while remaining connected to executable artifacts \cite{Executable_Randomized_Algorithms-AFP}.
-Recent work has also formalized nontrivial randomized algorithm analyses in Isabelle/HOL, including the CVM distinct-elements algorithm and the formalization of Coppersmith's method \cite{karayeletal2025CVM,kosaianetal2024coppersmith}.
+Other recent AFP developments include formalizations of Rabin's closest-pair algorithm and the Sumcheck Protocol, illustrating that both nontrivial randomized algorithms and probabilistic algebraic proof techniques can now be mechanized in Isabelle/HOL \cite{Randomized_Closest_Pair-AFP,Sumcheck_Protocol-AFP}.
 
 These developments provide important context for the present project.
 They show that proof assistants can already handle sophisticated probabilistic, algebraic, and algorithmic reasoning.
-They also indicate that Isabelle/HOL in particular offers a sufficiently mature infrastructure for such work.
+They also indicate that Isabelle/HOL in particular provides a sufficiently mature infrastructure for such work.
 However, to the best of our knowledge, the Isolation Lemma itself has not previously been formalized.
 The contribution of this report is therefore not to introduce the algorithmic use of isolation in perfect matching, but to mechanize the lemma itself and use it within a machine-checked correctness verification of a randomized parallel algorithm for the perfect matching problem.

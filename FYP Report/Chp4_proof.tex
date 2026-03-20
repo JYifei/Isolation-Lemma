@@ -8,7 +8,7 @@ This includes not only the main reasoning steps, but also background obligations
 Our goal is to construct a fully formal proof (FP) of the Isolation Lemma in Isabelle/HOL.
 However, it is neither practical nor desirable to translate a pen-and-paper (PP) proof directly into formal code.
 Instead, we introduce an intermediate stage, which we refer to as the structured proof (SP) level.
-This stage presents a structured decomposition of the argument, designed to align with the proof obligations of Isabelle/HOL (e.g.\ existence, measurability, and type constraints) while remaining human-readable.
+This stage presents a structured decomposition of the argument, designed to align with Isabelle/HOL proof obligations while remaining human-readable.
 
 Thus, each proof component in this chapter is presented in three layers:
 \begin{itemize}
@@ -120,11 +120,7 @@ lemma minimizers_same_weight:
 \end{lstlisting}
 
 This reformulation replaces a negated uniqueness predicate by a positive existential statement that provides concrete witnesses.
-Once such witnesses $A$ and $B$ are fixed, later arguments can reason about their structural relationship, for example by analyzing elements in the symmetric difference $A \triangle B$.
-This will be a key step in the collision characterization developed in subsequent sections.
-
-As an immediate consequence of this characterization, if $A$ and $B$ are both minimizers, they must attain the same total weight.
-This follows directly from the definition of the minimizer predicate and will be used implicitly in later comparisons between different minimizers.
+Together with the fact that any two minimizers must have the same total weight, it supplies the structural input needed for later arguments based on the symmetric difference \(A \triangle B\) and the collision characterization developed in subsequent sections.
 
 \section{The Alpha Construction}
 \label{sec:alpha}
@@ -140,11 +136,7 @@ This definition was introduced by Mulmuley et al.\ and plays a crucial role in i
 \medskip
 
 In our formalization, $\alpha(x)$ is defined using Isabelle's \texttt{LEAST} operator, which selects the least natural number satisfying a given predicate.
-We first define $\alpha(x)$ via \texttt{LEAST} to avoid committing to specific witnesses; the witness-based simplifications are derived later from the existence-of-minimizer lemmas.
-
-\medskip
-
-In the present chapter, we analyze its properties and show how the abstract \texttt{LEAST}-based definition can be simplified in subsequent arguments, once the existence of minimizers has been derived.
+This allows the definition to remain witness-free at the modeling stage, while later lemmas show how the resulting \texttt{LEAST}-based expressions can be reduced to concrete arithmetic forms once suitable minimizers have been established.
 
 \subsection{Simplifying the Definition of \texorpdfstring{$\alpha(x)$}{alpha(x)}}
 
@@ -420,7 +412,11 @@ measure_pmf.prob (w_pmf N U) {w. w x = k} = 1 / real N
 
 \noindent
 \textbf{(b) Measurability of $\alpha(x)$.}
-To apply probabilistic reasoning inside Isabelle/HOL, we must show that the auxiliary quantity $\alpha(x)$ is measurable. This is captured by:
+To apply probabilistic reasoning inside Isabelle/HOL, we must show that the auxiliary quantity $\alpha(x)$ is measurable. 
+In informal presentations, this point is usually left implicit, but in the formal development it must be established explicitly, since $\alpha(x)$ is defined through a LEAST-based construction.
+The argument proceeds by characterizing the relevant level sets using finite combinations of measurable predicates over the family $\mathcal{F}$, thereby placing the subsequent probability bounds on a rigorous measure-theoretic footing.
+
+This measurability is captured by:
 \begin{lstlisting}[language=Isabelle, caption={Measurability of Alpha}]
 lemma alpha_measurable:
   assumes "finite U" "F \subseteq Pow U" "x \in U"
