@@ -1,6 +1,6 @@
 theory Perfect_Matching_Parallel
   imports
-    Main 
+    Main
     "HOL-Analysis.Determinants"
     "HOL-Number_Theory.Number_Theory"
     "Isolation_Lemma_Main"
@@ -759,4 +759,151 @@ proof -
     by (simp add: condition_eq prob_bound)
 qed
 end
+
+definition edge_test_recovers_matching ::
+  "nat \<Rightarrow> (nat \<times> nat) set \<Rightarrow> ((nat \<times> nat) \<Rightarrow> nat) \<Rightarrow> bool" where
+  "edge_test_recovers_matching n E w_fun \<longleftrightarrow>
+     (\<exists>p_min.
+        bipartite_graph.is_perfect_matching n E p_min \<and> 
+        bipartite_graph.matching_weight n (\<lambda>u v. w_fun (u,v)) p_min =  bipartite_graph.min_weight_val n (\<lambda>u v. w_fun (u,v)) E \<and>
+        (\<forall>i<n. \<forall>j<n. (i,j) \<in> E \<longrightarrow>
+          ((bipartite_graph.cofactor_sum n (\<lambda>u v. w_fun (u,v)) E i j \<noteq> 0 \<and> w_fun (i,j) +
+              multiplicity 2 (bipartite_graph.cofactor_sum n (\<lambda>u v. w_fun (u,v)) E i j)  =
+              bipartite_graph.min_weight_val n (\<lambda>u v. w_fun (u,v)) E)
+           \<longleftrightarrow> p_min i = j)))"
+
+definition edge_test ::
+  "nat \<Rightarrow> (nat \<times> nat) set \<Rightarrow> ((nat \<times> nat) \<Rightarrow> nat) \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool"
+where
+  "edge_test n E w_fun i j \<longleftrightarrow>
+     (bipartite_graph.cofactor_sum n (\<lambda>u v. w_fun (u,v)) E i j \<noteq> 0 \<and>
+      w_fun (i,j) +
+        multiplicity 2
+          (bipartite_graph.cofactor_sum n (\<lambda>u v. w_fun (u,v)) E i j)
+        =
+        bipartite_graph.min_weight_val n (\<lambda>u v. w_fun (u,v)) E)"
+
+lemma unique_min_weight_implies_edge_test_recovers:
+  assumes uniq:
+    "bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w_fun (u,v)) E"
+  shows
+    "edge_test_recovers_matching n E w_fun"
+proof -
+  let ?w = "\<lambda>u v. w_fun (u,v)"
+
+  obtain p_min where pmin_props:
+    "bipartite_graph.is_perfect_matching n E p_min"
+    "bipartite_graph.matching_weight n ?w p_min =
+      bipartite_graph.min_weight_val n ?w E"
+    "\<forall>q. bipartite_graph.is_perfect_matching n E q \<and>
+         bipartite_graph.matching_weight n ?w q =
+         bipartite_graph.min_weight_val n ?w E
+         \<longrightarrow> q = p_min"
+    using uniq
+    unfolding bipartite_graph.unique_min_weight_condition_def
+    by auto
+
+  have edge_correct:
+    "\<forall>i<n. \<forall>j<n. (i,j)\<in>E \<longrightarrow> (edge_test n E w_fun i j \<longleftrightarrow> p_min i = j)"
+  proof (intro allI impI)
+    fix i j
+    assume i_lt: "i < n"
+    assume j_lt: "j < n"
+    assume edge_in: "(i,j) \<in> E"
+
+    have edge_char:
+      "(p_min i = j) \<longleftrightarrow>
+       (bipartite_graph.cofactor_sum n ?w E i j \<noteq> 0 \<and>
+        ?w i j +
+          multiplicity 2 (bipartite_graph.cofactor_sum n ?w E i j) =
+        bipartite_graph.min_weight_val n ?w E)"
+      using bipartite_graph.edge_test_iff_correct[of n E p_min ?w i j]
+      using pmin_props i_lt j_lt edge_in
+      by blast
+
+    show "edge_test n E w_fun i j \<longleftrightarrow> p_min i = j"
+      using edge_char
+      unfolding edge_test_def
+      by auto
+  qed
+
+  show ?thesis
+    unfolding edge_test_recovers_matching_def
+    using pmin_props edge_correct
+    using bipartite_graph.edge_test_iff_correct by blast
+qed
+
+theorem edge_test_recovers_with_high_probability:
+  shows
+    "measure_pmf.prob (w_pmf N E)
+      {w. edge_test_recovers_matching n E w}
+     \<ge> 1 - real(card E)/real N"
+proof -
+  let ?A = "{w. bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w(u,v)) E}"
+  let ?B = "{w. edge_test_recovers_matching n E w}"
+
+  have subset_AB: "?A \<subseteq> ?B"
+  proof
+    fix w
+    assume "w \<in> ?A"
+    then have uniq_w:
+      "bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w(u,v)) E"
+      by simp
+
+    have "edge_test_recovers_matching n E w"
+      using unique_min_weight_implies_edge_test_recovers[OF uniq_w]
+      by simp
+    then show "w \<in> ?B"
+      by simp
+  qed
+
+theorem edge_test_recovers_with_high_probability:
+  fixes N :: nat
+  assumes N_ge_1: "N \<ge> 1"
+  assumes PM_exists: "\<exists>p. bipartite_graph.is_perfect_matching n E p"
+  assumes E_bounds: "E \<subseteq> {0..<n} \<times> {0..<n}"
+  shows
+    "measure_pmf.prob (w_pmf N E)
+      {w. edge_test_recovers_matching n E w}
+     \<ge> 1 - real(card E)/real N"
+proof -
+  let ?A = "{w. bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w(u,v)) E}"
+  let ?B = "{w. edge_test_recovers_matching n E w}"
+
+  have subset_AB: "?A \<subseteq> ?B"
+  proof
+    fix w
+    assume "w \<in> ?A"
+    then have uniq_w:
+      "bipartite_graph.unique_min_weight_condition n (\<lambda>u v. w(u,v)) E"
+      by simp
+
+    have "edge_test_recovers_matching n E w"
+      using unique_min_weight_implies_edge_test_recovers[OF uniq_w]
+      by simp
+    then show "w \<in> ?B"
+      by simp
+  qed
+
+  have uniq_prob:
+    "measure_pmf.prob (w_pmf N E) ?A
+      \<ge> 1 - real(card E)/real N"
+    using bipartite_graph.isolation_lemma_for_perfect_matching[OF N_ge_1 PM_exists E_bounds]
+    by simp
+
+  have B_in_events:
+    "?B \<in> measure_pmf.events (w_pmf N E)"
+    by simp
+
+  have prob_mono_AB:
+    "measure_pmf.prob (w_pmf N E) ?A
+      \<le> measure_pmf.prob (w_pmf N E) ?B"
+    using subset_AB B_in_events
+    by (rule measure_pmf.finite_measure_mono)
+
+  from uniq_prob prob_mono_AB
+  show ?thesis
+    by linarith
+qed
 end
+
