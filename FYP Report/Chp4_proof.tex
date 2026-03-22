@@ -1,12 +1,12 @@
 \chapter{Proof Construction}
 \label{chp:proof}
 
-In this chapter, we construct a machine-checked proof of the Isolation Lemma in Isabelle/HOL and present the development in three layers (PP/SP/FP) to bridge informal intuition and formal verification.
+In this chapter, we construct a machine-checked proof of the Isolation Lemma in Isabelle/HOL.
+To present the development clearly, we organize it in three layers (PP/SP/FP), bridging informal intuition and formal verification.
 Unlike pen-and-paper proofs, formal verification requires every mathematical step to be made fully explicit.
-This includes not only the main reasoning steps, but also background obligations such as existential witnesses, measurability, independence, type correctness, and totality.
+This includes not only the main proof steps, but also background obligations such as existential witnesses, measurability, independence, type correctness, and totality.
 
-Our goal is to construct a fully formal proof (FP) of the Isolation Lemma in Isabelle/HOL.
-However, it is neither practical nor desirable to translate a pen-and-paper (PP) proof directly into formal code.
+In practice, however, a pen-and-paper (PP) proof is not translated directly into formal code.
 Instead, we introduce an intermediate stage, which we refer to as the structured proof (SP) level.
 This stage presents a structured decomposition of the argument, designed to align with Isabelle/HOL proof obligations while remaining human-readable.
 
@@ -17,8 +17,8 @@ Thus, each proof component in this chapter is presented in three layers:
     \item \textbf{FP:} The corresponding formalization code in Isabelle/HOL.
 \end{itemize}
 
-We organize the whole proof as a sequence of structural reductions:
-We begin by establishing the existence of minimizers and by reformulating its non-uniqueness in a constructive form.
+We organize the proof as a sequence of structural reductions.
+We begin by establishing the existence of minimizers and by reformulating non-uniqueness in a constructive form.
 Then we analyze the auxiliary quantity $\alpha(x)$, which plays a central role in isolating the dependence on individual weights.
 This leads to a reduction of the uniqueness failure to an explicit collision event of the form $w(x) = \alpha(x)$.
 Finally, we bound the probability of such events using the product probability space constructed in Chapter~\ref{chp:modeling}.
@@ -31,7 +31,7 @@ In particular, for a given family of sets $\mathcal{F}$ and a weight function $w
 
 \paragraph{PP.}
 In informal proofs, this step is usually omitted.
-Since weights are natural number and the family $\mathcal{F}$ is assumed to be non-empty, the existence of a minimizer is considered self-evident.
+Since weights are natural numbers and the family $\mathcal{F}$ is assumed to be non-empty, the existence of a minimizer is considered self-evident.
 
 \paragraph{SP.}
 In preparation for formalization, however, we must isolate this assumption and state it precisely, since later constructs (like $\alpha(x)$ or uniqueness predicates) depend on the existence of at least one such set.
@@ -45,6 +45,7 @@ the weight function $w$.}
 \paragraph{FP.}
 This lemma is formalized as:
 
+\listingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Existence of Minimizer}]
 lemma exist_minimizer:
   assumes "F \neq {}"
@@ -73,7 +74,7 @@ saying that a minimizer is "not unique" simply means that there exist at least t
 This idea is often expressed informally by statements such as "there are two distinct minimizers", without any further logical unpacking.
 
 \paragraph{SP.}
-To make this intuition compatible with formal reasoning,we refine it into a positive existential formulation.
+To make this intuition compatible with formal reasoning, we refine it into a positive existential formulation.
 Instead of negating a uniqueness statement, we characterize failure of uniqueness by the explicit existence of two distinct witnesses that both satisfy the minimizer predicate.
 
 Concretely, the minimizer of $\mathcal{F}$ under $w$ is not unique if and only if there exist two distinct sets $A \neq B$ in $\mathcal{F}$ such that both are minimizers.
@@ -152,7 +153,7 @@ To make this intuition precise, we analyze the two \texttt{LEAST} expressions in
 First, suppose that $B$ is a minimizer of $\mathcal{F}$ under the weight function $w$, and that $x \notin B$.
 Since $B \in \mathcal{F}$ and attains the minimum total weight among all sets in $\mathcal{F}$, it satisfies the defining predicate of the first \texttt{LEAST} expression.
 Moreover, any other set $S \in \mathcal{F}$ with $x \notin S$ must have weight at least $w(B)$.
-Hence, the minimum total weight among all sets in $\mathcal{F}$ that do not contain $x$ is attained by $B$, and the first \texttt{LEAST} expression can be shown equal to the concrete value $W(B)$.
+Hence, the minimum total weight among all sets in $\mathcal{F}$ that do not contain $x$ is attained by $B$, and the first \texttt{LEAST} expression can be shown to be equal to the concrete value $w(B)$.
 
 Second, suppose that $A$ is a minimizer of $\mathcal{F}$ and that $x \in A$.
 Removing $x$ from $A$ yields a residual set whose total weight equals $w(A) - w(x)$.
@@ -165,6 +166,7 @@ The resulting expression can then be used directly in subsequent arguments.
 \paragraph{FP.}
 These simplifications are formalized by the following auxiliary lemmas in Isabelle/HOL:
 
+\listingneedspace
 \begin{lstlisting}[language=Isabelle, caption={First LEAST Eliminated by a Minimizer}]
 lemma minimizer_B_eq_least_not_in:
   assumes "minimizer F w B" "x ~: B"
@@ -172,6 +174,7 @@ lemma minimizer_B_eq_least_not_in:
          = wt w B"
 \end{lstlisting}
 
+\listingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Second LEAST Eliminated by a Minimizer}]
 lemma minimizer_A_eq_least_in_residual:
   assumes "finite U" "F \subseteq Pow U" "minimizer F w A" "x \in A"
@@ -195,7 +198,7 @@ Changing the value of $w(x)$ shifts the total weight of every set containing $x$
 Hence the two minima defining $\alpha(x)$ -- one over sets excluding $x$, and one over residual weights of sets including $x$ -- remain invariant under modifications of $w(x)$.
 
 \paragraph{SP.}
-We now formulate this independence property as a formal lemma, which will serve as a key technical interface for the probabilistic argument in the next section.
+We now formulate this independence property as a formal lemma, which will serve as a key technical input to the probabilistic argument in the next section.
 
 \noindent
 \textbf{Lemma (Independence of $\alpha(x)$).}
@@ -219,7 +222,7 @@ and similarly for the residual term
 \exists S\in F.\; x\in S \land wt\ w'\ (S-\{x\}) = n.
 \]
 
-Therefore, the two \texttt{LEAST} values coincide under $w$ and $w'$.
+Therefore, the two corresponding \texttt{LEAST} values coincide.
 Unfolding the definition of $\alpha(x)$ then yields the desired conclusion:
 \[
 \alpha_w(x) = \alpha_{w'}(x).
@@ -228,6 +231,7 @@ Unfolding the definition of $\alpha(x)$ then yields the desired conclusion:
 \paragraph{FP.}
 This lemma is formalized as \texttt{alpha\_independent\_of\_coord} in Isabelle/HOL:
 
+\listingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Independence of alpha(x) from the x-coordinate}]
 lemma alpha_independent_of_coord:
   assumes "finite U" "F \subseteq Pow U" "x \in U"
@@ -242,7 +246,7 @@ This lemma is proved by establishing weight congruence on sets contained in $U -
 \label{sec:collision}
 
 \paragraph{PP.}
-We now establish the key structural link between the failure of uniqueness and the auxiliary quantity $\alpha(x)$.
+We now establish the key link between non-uniqueness and the auxiliary quantity $\alpha(x)$.
 
 Assume that the minimizer of $\mathcal{F}$ under $w$ is not unique.
 Then there exist two distinct minimizers $A,B \in \mathcal{F}$.
@@ -254,9 +258,8 @@ w(A) = w(B).
 Moreover, in the definition of $\alpha(x)$, the minimum over sets not containing $x$ is realized by $B$, while the minimum over residual weights of sets containing $x$ is realized by $A \setminus \{x\}$.
 Hence,
 \[
-\alpha(x)
-= w(B) - w(A \setminus \{x\})
-= w(A) - \bigl(w(A) - w(x)\bigr)
+\alpha(x) = w(B) - w(A \setminus \{x\})
+= w(A) - w(A \setminus \{x\})
 = w(x).
 \]
 Therefore, non-uniqueness implies the existence of an element $x \in U$ such that $w(x) = \alpha(x)$.
@@ -264,7 +267,7 @@ Therefore, non-uniqueness implies the existence of an element $x \in U$ such tha
 \paragraph{SP.}
 
 The pen-and-paper argument above already matches closely the structure of the formal proof.
-The only additional ingredients required for formalization are the explicit side conditions ensuring that the two \texttt{LEAST} expression in the definitions of $\alpha(x)$ are well-defined and can be eliminated.
+The only additional ingredients required for formalization are the explicit side conditions ensuring that the two \texttt{LEAST} expressions in the definitions of $\alpha(x)$ are well-defined and can be eliminated.
 
 Concretely, we assume that the universe $U$ is finite and that the family $\mathcal{F}$ is a collection of subsets of $U$.
 Under these assumptions, the two auxiliary lemmas established in Section~\ref{sec:alpha} apply:
@@ -272,12 +275,13 @@ the first shows that the \texttt{LEAST} term over sets not containing $x$ is rea
 and the second shows that the residual \texttt{LEAST} term over sets containing $x$ is realized by $A \setminus \{x\}$ whenever $x \in A$.
 
 Together with the lemma stating that any two minimizers have equal total weight, these results allow the formal proof to mirror the pen-and-paper derivation step by step.
-No additional combinatorial insight is required at this stage; the formalization consists entirely in assembling previously established lemmas and discharging the necessary finiteness and membership conditions.
+No further combinatorial insight is required at this stage; the formal proof proceeds by assembling previously established lemmas and discharging the necessary finiteness and membership conditions.
 
 \paragraph{FP.}
 
 This reasoning is captured in Isabelle/HOL by the following lemma:
 
+\biglistingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Collision Witnessed by a Single Coordinate}]
 lemma two_minimizers_alpha_eq:
   assumes "finite U" "F \subseteq Pow U"
@@ -298,12 +302,12 @@ Finally, the standard splitting identity $w(A) = w(A \setminus \{x\}) + w(x)$ is
 
 \paragraph{PP.}
 
-The probabilistic argument proceeds by reducing failure of uniqueness to a collection of single-coordinate collision events.
+The probabilistic argument reduces failure of uniqueness to a single-coordinate collision event.
 By Section~\ref{sec:collision}, if the minimizer is not unique, then there exists some $x \in U$ such that
 \[
 w(x) = \alpha(x).
 \]
-Hence it is enough to bound the probability of these collision events and then sum over all $x \in U$.
+It therefore suffices to bound the probability of these events and sum over all $x \in U$.
 
 For a fixed element $x$, the key observation is that $\alpha(x)$ depends only on the weights assigned to elements of $U \setminus \{x\}$, whereas $w(x)$ is chosen independently and uniformly from $\{1,\dots,N\}$.
 Thus the event $w(x)=\alpha(x)$ can occur with probability at most $1/N$.
@@ -396,6 +400,7 @@ In Isabelle/HOL, the above structural steps are realized by the following core l
 \noindent
 \textbf{(a) Coordinate support and point probabilities.}
 We first show that for any $x \in U$, the random variable $w(x)$ takes values almost surely in $\{1,\dots,N\}$. This yields the following support lemma:
+\listingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Coordinate Support}]
 lemma w_pmf_component_in_range:
   assumes "x \in U" "N >= 1" "finite U"
@@ -417,6 +422,7 @@ In informal presentations, this point is usually left implicit, but in the forma
 The argument proceeds by characterizing the relevant level sets using finite combinations of measurable predicates over the family $\mathcal{F}$, thereby placing the subsequent probability bounds on a rigorous measure-theoretic footing.
 
 This measurability is captured by:
+\listingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Measurability of Alpha}]
 lemma alpha_measurable:
   assumes "finite U" "F \subseteq Pow U" "x \in U"
@@ -424,13 +430,14 @@ lemma alpha_measurable:
          \in (PiM (U-{x}) (\lambda_. count_space UNIV)) ->M (count_space UNIV)"
 \end{lstlisting}
 
-This proof relies on measurability of finite sums, measurability of finite existential predicates, and the measurability theorem for the \texttt{LEAST} operator.
+This proof relies on measurability of finite sums, finite existential predicates, and the measurability theorem for the \texttt{LEAST} operator.
 
 \medskip
 
 \noindent
 \textbf{(c) Independence lemma.}
 Next, we lift coordinate-wise independence to the level of random variables by showing that $w(x)$ is independent of $\alpha(x)$, since the latter depends only on the remaining coordinates:
+\listingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Independence of Coordinate and Alpha}]
 prob_space.indep_var (measure_pmf (w_pmf N U))
   (count_space UNIV) (\lambdaw. w x)
@@ -444,15 +451,14 @@ This step combines restriction lemmas for product measures with the previously e
 \noindent
 \textbf{(d) Main theorem: Isolation Lemma.}
 Finally, combining the single-coordinate probability bound with the union bound yields the formalized version of the Isolation Lemma:
+\listingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Main Theorem: Isolation Lemma}]
 theorem isolation_lemma_main:
   fixes U :: "'a set" and F :: "'a set set" and N :: nat
   assumes "finite U" "F \subseteq Pow U" "F \noteq {}" "N >= 1"
-  shows "measure_pmf.prob (w_pmf N U){w. has_unique_minimizer F w}
+  shows "measure_pmf.prob (w_pmf N U) {w. has_unique_minimizer F w}
          >= 1 - real(card U) / real N"
 \end{lstlisting}
-
-This theorem completes the formal derivation from the structural collision event to the global lower bound on the probability of uniqueness.
 
 Taken together, these lemmas provide the formal probabilistic infrastructure needed for the final argument.
 With measurability and independence established explicitly in Isabelle/HOL, the Isolation Lemma follows by combining the single-coordinate bound with the union bound.

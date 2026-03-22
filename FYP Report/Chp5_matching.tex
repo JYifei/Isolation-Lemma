@@ -4,10 +4,10 @@
 \section{Introduction to Randomized Parallel Matching}
 \label{sec:matching_intro}
 
-We now turn to the main application of the formalized Isolation Lemma: the correctness verification of a randomized parallel algorithm for the Perfect Matching problem in bipartite graphs.
+We now turn to the main application of the formalized Isolation Lemma: a machine-checked correctness argument for a randomized parallel algorithm for the Perfect Matching problem in bipartite graphs.
 
 The classical algorithmic background of Perfect Matching and the role of isolation were reviewed in Chapter~\ref{chp:prelims}.
-The focus of the present chapter is therefore not to reintroduce that background, but to show how the formalized Isolation Lemma fits into a machine-checked correctness pipeline.
+The focus of the present chapter is therefore not to repeat that background, but to show how the formalized Isolation Lemma fits into the machine-checked correctness argument.
 
 More specifically, the chapter proceeds in two stages.
 First, we establish a conditional correctness argument: assuming that random weighting isolates a unique minimum-weight perfect matching, we show that this matching can be recovered through algebraic tests based on determinants, multiplicities, and minors.
@@ -16,7 +16,7 @@ Together, these two parts yield the probabilistic correctness argument for the r
 
 \textbf{Decision versus Construction.}
 For the Perfect Matching problem, there is an important distinction between the \emph{decision} version, which asks whether a perfect matching exists, and the \emph{construction} version, which asks how to recover the edges of such a matching.
-The decision version admits efficient parallel treatment through algebraic methods based on matrix determinants, and thus lies in the complexity class \textbf{NC}.
+The decision version admits efficient randomized parallel treatment through algebraic methods based on matrix determinants.
 
 By contrast, the construction version is more difficult in a parallel setting, since identifying the matching requires globally consistent choices rather than merely certifying existence.
 This difficulty is amplified by the presence of many symmetric perfect matchings.
@@ -27,7 +27,7 @@ Without a mechanism for selecting a single distinguished solution, parallel loca
 
 To formalize the matching application, we first translate the combinatorial search for perfect matchings into an algebraic problem amenable to parallel reasoning.
 The standard approach utilizes the \emph{Tutte matrix} \cite{mulmuley1987matching} (often referred to as the Edmonds matrix in the bipartite case) to encode the graph into matrix form.
-In the present development, this encoding is used not only to detect perfect matchings, but also to represent their total weights algebraically, so that the minimum-weight solution can later be recovered from the determinant.
+In the present development, this encoding is used not only to detect perfect matchings, but also to represent their total weights algebraically, so that the minimum-weight matching can later be recovered from the determinant-based information.
 
 \subsection{Matrix Construction in Isabelle/HOL}
 
@@ -38,23 +38,24 @@ In the \texttt{bipartite\_graph} locale, the matrix $D$ is constructed such that
 \begin{lstlisting}[language=Isabelle, caption={Matrix Entry Definition}]
 definition D_entry :: 
     "nat => nat => int" where
-    "D_entry i j = (if (i,j) : E then (2::int) ^ (w i j) else 0)"
+    "D_entry i j = (if (i,j) \in E then (2::int) ^ (w i j) else 0)"
 \end{lstlisting}
 
 The choice of $2^{w_{i,j}}$ as the matrix entry, as proposed in \cite{mulmuley1987matching, Gupta2011Lec10}, is the key algebraic design decision in this construction.
 It ensures that the total weight of a perfect matching is reflected in the exponent of 2 appearing in the corresponding term of the determinant expansion.
-This algebraic encoding allows the determinant aggregate information about all feasible matchings simultaneously through its powers-of-2 structure.
+This algebraic encoding allows the determinant to aggregate information about all feasible matchings simultaneously through its powers-of-2 structure.
 
 \subsection{Determinant and Perfect Matchings}
 
 A perfect matching in a bipartite graph can be formally defined as a permutation $p$ of the set $\{0, \dots, n-1\}$ such that every pair $(i, p(i))$ is a valid edge in $E$.
 Our formal definition in Isabelle/HOL captures this requirement:
 
+\listingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Perfect Matching Definition}]
 definition is_perfect_matching :: 
     "(nat => nat) => bool" where
   "is_perfect_matching p <-> 
-    (p permutes {0..<n} & (ALL i < n. (i, p i) : E))"
+    (p permutes {0..<n} & (ALL i < n. (i, p i) \in E))"
 \end{lstlisting}
 
 The determinant of matrix $D$, defined via the Leibniz formula, serves as the primary algebraic object in the extraction argument:
@@ -77,14 +78,14 @@ If $p$ does not represent a perfect matching, at least one $D_{i, p(i)}$ is 0, c
 This mapping shows that the determinant is a signed sum over all perfect matchings, with each matching contributing a term whose power of 2 records its total weight.
 Figure~\ref{fig:graph-matrix-encoding} illustrates this correspondence on a small example: the highlighted perfect matching on the graph corresponds to the highlighted entries in the matrix.
 
-\begin{figure}[t]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.78\textwidth]{fig/fig2.png}
-    \caption{Graph-to-matrix encoding for a weighted bipartite graph. Each nonzero matrix entry corresponds to an edge and is given by $2^{w_{ij}}$, while absent edges contribute 0. The highlighted entries correspond to the highlighted minimum-weight perfect matching.}
+    \caption{Graph-to-matrix encoding for a weighted bipartite graph. Each nonzero matrix entry corresponds to an edge and is given by $2^{w_{i,j}}$, while absent edges contribute 0. The highlighted entries correspond to the highlighted minimum-weight perfect matching.}
     \label{fig:graph-matrix-encoding}
 \end{figure}
 
-This is the crucial algebraic encoding used in the next section, where we show that, under the uniqueness condition, the minimum matching weight is reflected in the 2-adic multiplicity of the determinant.
+This is the key algebraic encoding used in the next section, where we show that, under the uniqueness condition, the minimum matching weight is reflected in the 2-adic multiplicity of the determinant.
 
 \section{The Weight-to-Multiplicity Bridge}
 \label{sec:weight_multiplicity}
@@ -101,6 +102,7 @@ In that case, the minimum weight can no longer be identified through the 2-adic 
 By contrast, if the minimum-weight perfect matching is unique, its contribution survives as a single non-zero term, and no term of higher weight can cancel it.
 This is exactly why the uniqueness guarantee provided by the Isolation Lemma is essential for the weight-to-multiplicity argument.
 
+Let \(P\) denote the set of all perfect matchings of \(G\).
 Formally, if $W_0$ is the unique minimum weight, $\det(D)$ can be expressed as:
 \begin{equation}
     \det(D) = \text{sgn}(p_{\min}) 2^{W_0} + 
@@ -113,12 +115,13 @@ This is the algebraic fact formalized in Isabelle/HOL in the lemmas below.
 
 \subsection{Formalization via Multiplicity}
 To extract this minimum weight in Isabelle/HOL, we use the \texttt{multiplicity} function from the number theory library.
-The multiplicity of a prime $k$ in an integer $x$ is the largest exponent $m$ such that $k^m$ divides $x$.
+For an integer $x$, the multiplicity of $2$ in an integer $x$ is the largest exponent $m$ such that $2^m$ divides $x$.
 In the present setting, taking the multiplicity of $2$ in the determinant quantity formalized as \texttt{det\_D} yields exactly the minimum weight $W_0$.
 
 We formalized this connection through several key lemmas.
 First, \texttt{multiplicity\_2\_abs} establishes the base case for powers of 2:
 
+\listingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Multiplicity of Power of 2}]
 lemma multiplicity_2_abs:
   fixes x :: int
@@ -145,26 +148,28 @@ The next section refines this global information into a local criterion for deci
 The previous section provided a global algebraic characterization of the minimum perfect-matching weight.
 We now refine this information into an edge-wise extraction criterion.
 The final stage of the extraction argument is to determine which edges $(i, j) \in E$ belong to the unique minimum-weight perfect matching $p_{\min}$.
-Crucially, this step must be parallelizable, so each edge must be testable independently of the others.
+Crucially, this step must remain parallelizable, so each edge must be testable independently of the others.
 
 \subsection{Minors and Subgraph Matchings}
 For any edge $(i, j)$, we consider the minor $D_{i,j}$, which is the submatrix obtained by deleting the $i$-th row and $j$-th column of $D$.
+Let $u_i \in U$ and $v_j \in V$ denote the vertices indexed by $i$ and $j$, respectively.
 Algebraically, the determinant of this minor encodes the perfect matchings of the reduced graph $G \setminus \{u_i, v_j\}$ in exactly the same weighted form as the full determinant encodes perfect matchings of $G$.
 If an edge $(i, j)$ belongs to a perfect matching $p$ in $G$, then $p \setminus \{(i, j)\}$ must be a perfect matching in the reduced graph.
 
 In our formalization, we define \texttt{minor\_sum i j} to represent the contribution of all matchings containing the edge $(i, j)$.
 This relationship is captured by the lemma \texttt{minor\_sum\_decomposition}:
 
+\listingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Minor Sum Decomposition}]
 lemma minor_sum_decomposition:
-  assumes "i < n" "j < n" "(i,j) : E"
+  assumes "i < n" "j < n" "(i,j) \in E"
   shows "minor_sum i j = D_entry i j * cofactor_sum i j"
 \end{lstlisting}
 
 This decomposition isolates the contribution of the edge $(i, j)$ from the remaining matching structure.
 Figure~\ref{fig:edge-minor-reduction} illustrates this reduction on a small example: selecting an edge in the highlighted perfect matching corresponds to selecting its matrix entry and deleting the associated row and column.
 
-\begin{figure}[t]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.82\textwidth]{fig/fig3.png}
     \caption{Reduction from a selected matching edge to the corresponding matrix position. The highlighted edge in the minimum-weight perfect matching corresponds to the highlighted matrix entry, while the shaded row and column indicate the deletion used to form the associated minor.}
@@ -180,14 +185,35 @@ Thus the global invariant obtained in the previous section can be refined into a
 
 This core algebraic criterion can be expressed by the identity:
 \begin{equation}
-w(i,j) + \operatorname{mult}_2\!\bigl(\det(D_{i,j})\bigr) = W_0
+w_{i,j} + \operatorname{mult}_2\!\bigl(\det(D_{i,j})\bigr) = W_0
 \end{equation}
 where $W_0$ denotes the minimum perfect-matching weight.
 
-In the formal development, the global minimum weight $W_0$ is represented by \texttt{min\_weight\_val}, and the minor-based determinant quantity is represented by \texttt{cofactor\_sum i j}.
+To connect the informal identity in~(5.4) with the Isabelle statement, we use the decomposition established in Lemma~5.5:
 
-We formalized this as a necessary and sufficient condition in the theorem \texttt{edge\_test\_iff\_correct}:
+\[
+\texttt{minor\_sum}\ i\ j
+=
+\texttt{D\_entry}\ i\ j \cdot \texttt{cofactor\_sum}\ i\ j .
+\]
 
+Here, \texttt{D\_entry}\ i\ j is the matrix entry associated with the edge $(i,j)$, namely $\pm 2^{w_{i,j}}$, so its $2$-adic multiplicity is exactly $w_{i,j}$.
+Thus, whenever $\texttt{cofactor\_sum}\ i\ j \neq 0$, additivity of multiplicity gives
+\[
+\operatorname{mult}_2(\texttt{minor\_sum}\ i\ j)
+=
+w_{i,j} + \operatorname{mult}_2(\texttt{cofactor\_sum}\ i\ j).
+\]
+
+Accordingly, in the formal development, the global minimum weight $W_0$ is represented by \texttt{min\_weight\_val}, while the minor contribution associated with deleting row $i$ and column $j$ is captured by \texttt{cofactor\_sum i j}.
+
+The informal criterion
+\[
+w_{i,j} + \operatorname{mult}_2\!\bigl(\det(D_{i,j})\bigr) = W_0
+\]
+is captured in the formal development by the following edge-wise test:
+
+\biglistingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Correctness of Edge Extraction}]
 theorem edge_test_iff_correct:
   assumes p_min_def: 
@@ -219,39 +245,39 @@ we now instantiate that general result to the family of perfect matchings in a b
 To apply the Isolation Lemma, we first define a formal mapping between graph-theoretic structures and the set-theoretic framework.
 In the abstract set-family formulation of the Isolation Lemma, the universe is identified with the edge set $E$, and the family $\mathcal{F}$ is defined as the collection of all edge sets that constitute a valid perfect matching:
 
+\listingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Perfect Matching Family}]
 definition perfect_matching_family :: 
     "nat => (nat * nat) set => ((nat * nat) set) set" where
     "perfect_matching_family n E = 
       {matching_to_set n p | p. 
-       p permutes {0..<n} & (ALL i < n. (i, p i) : E)}"
+       p permutes {0..<n} & (ALL i < n. (i, p i) \in E)}"
 \end{lstlisting}
 
-A critical step in this bridge is to ensure that the weight of a matching in the graph model coincides with the weight of the corresponding set in the isolation model.
+To transfer the Isolation Lemma to the graph setting, we must show that the weight of a matching in the graph model coincides with the weight of the corresponding set in the abstract isolation model.
 This is established by the lemma \texttt{weight\_equivalence}.
 Furthermore, the lemma \texttt{matching\_to\_set\_inj} ensures that distinct perfect matchings are represented by distinct edge sets in the set-family model.
 
 These lemmas together provide the interface between the graph-theoretic formulation of perfect matching and the abstract set-family formulation used in Chapter~\ref{chp:proof}.
 They ensure that the Isolation Lemma can be transferred to the perfect-matching setting without changing the underlying weight semantics.
 
-\subsection{Final Probability Bound}
+\subsection{Interface to the Isolation Lemma}
 The key interface theorem is the lemma \texttt{pm\_iso\_equivalence}.
 It identifies the graph-theoretic uniqueness condition required by the extraction argument with the abstract predicate \texttt{has\_unique\_minimizer} used in Chapter~\ref{chp:proof}.
 This equivalence is what allows the general Isolation Lemma to be lifted to the specific case of bipartite perfect matchings.
 
+\listingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Equivalence between perfect-matching uniqueness and the abstract minimizer predicate}]
 lemma pm_iso_equivalence:
-  assumes "E <= {0..<n} * {0..<n}"
-  shows
-    "{w. unique_min_weight_condition (\lambda u v. w (u,v)) E}
-     =
-     {w. has_unique_minimizer
-           {p. is_perfect_matching p}
-           (weight_fun E (\lambda u v. w (u,v)))}"
+  fixes w_func :: "nat * nat => nat"
+  shows "bipartite_graph.unique_min_weight_condition n (\lambda u v. w_func(u,v)) E
+         <-> has_unique_minimizer (perfect_matching_family n E) w_func"
 \end{lstlisting}
 
+\subsection{Final Probability Bound and End-to-End Correctness}
 The theorem \texttt{isolation\_lemma\_for\_perfect\_matching} provides the machine-checked lower bound on the success probability of the isolation step:
 
+\biglistingneedspace
 \begin{lstlisting}[language=Isabelle, caption={Isolation Lemma instantiated for Perfect Matching}]
 theorem isolation_lemma_for_perfect_matching:
   fixes N :: nat
@@ -259,15 +285,15 @@ theorem isolation_lemma_for_perfect_matching:
   assumes "EX p. is_perfect_matching p"
   assumes "E <= {0..<n} * {0..<n}"
   shows "measure_pmf.prob (w_pmf N E)
-      {w. unique_min_weight_condition (\lambda u v. w (u,v)) E}
+      {w. unique_min_weight_condition n (\lambda u v. w (u,v)) E}
       >= 1 - (real (card E) / real N)"
 \end{lstlisting}
 
-This theorem shows that, for a graph with edge set $E$ and edge weights chosen uniformly from $\{1, \dots, N\}$, the event that a unique minimum-weight perfect matching exists has probability at least $1 - |E|/N$.
+This theorem shows that, for a graph with edge set $E$ and edge weights chosen uniformly from $\{1, \dots, N\}$, the event that a unique minimum-weight perfect matching exists has probability at least $1 - \frac{|E|}{N}$.
 
 However, this isolation statement alone is not yet the final algorithmic correctness result.
-The extraction theorem from Section~5.4 shows only that \emph{if} a unique minimum-weight perfect matching exists, then the minor-based edge test reconstructs it correctly.
-To obtain the full randomized correctness statement required for the algorithm, we must combine these two results into a single end-to-end theorem.
+The extraction theorem from Section~\ref{sec:edge_extraction} shows only that \emph{if} a unique minimum-weight perfect matching exists, then the minor-based edge test reconstructs it correctly.
+To obtain the randomized correctness statement for the algorithm, we must combine these two results into a single end-to-end theorem.
 
 We therefore prove the following final correctness theorem:
 
@@ -284,15 +310,12 @@ theorem edge_test_recovers_with_high_probability:
 \end{lstlisting}
 
 The proof of this final theorem follows the logical structure of the development in the previous two sections.
-Section~5.4 established a conditional correctness result: whenever the random weight assignment produces a unique minimum-weight perfect matching, the minor-based edge test recovers exactly that matching.
-Section~5.5 then showed, via the Isolation Lemma, that this uniqueness event occurs with probability at least $1 - |E|/N$.
+Section~\ref{sec:edge_extraction} established a conditional correctness result: whenever the random weight assignment produces a unique minimum-weight perfect matching, the minor-based edge test recovers exactly that matching.
+Section~\ref{sec:matching_prob_correctness} then showed, via the Isolation Lemma, that this uniqueness event occurs with probability at least $1 - \frac{|E|}{N}$.
 
 The theorem above combines these two ingredients into a single probabilistic correctness statement for the randomized parallel matching procedure.
-In other words, the algorithm is correct for every weight assignment satisfying the uniqueness condition, and the Isolation Lemma guarantees that such weight assignments occur with probability at least $1 - |E|/N$.
-
-This gives exactly the desired statement that, with probability at least $1 - |E|/N$, the algorithm is correct.
-Equivalently, the probability of failure is at most $|E|/N$.
-This is precisely a Monte Carlo-style correctness bound: the random weighting isolates a unique minimum-weight perfect matching with high probability, and the parallel edge test then recovers precisely that matching.
+That is, the algorithm is correct for every weight assignment satisfying the uniqueness condition, and the Isolation Lemma guarantees that such weight assignments occur with probability at least $1 - \frac{|E|}{N}$.
+This yields a Monte Carlo-style correctness bound: the algorithm succeeds with probability at least $1 - \frac{|E|}{N}$, and fails with probability at most $\frac{|E|}{N}$.
 Hence the connection between the isolation argument and the extraction argument is not merely informal; it is captured by a final machine-checked theorem.
 
 
@@ -309,7 +332,7 @@ Building on this global invariant, we formalized a minor-based edge-extraction c
 
 Second, we established the probabilistic justification of the uniqueness premise required by this extraction argument.
 By mapping perfect matchings to the abstract set-family framework of Chapter~\ref{chp:proof}, we instantiated the general Isolation Lemma to the family of perfect matchings in a bipartite graph.
-This yielded a machine-checked lower bound showing that a unique minimum-weight perfect matching exists with probability at least $1 - |E|/N$ under random edge weights.
+This yielded a machine-checked lower bound showing that a unique minimum-weight perfect matching exists with probability at least $1 - \frac{|E|}{N}$ under random edge weights.
 
 Combining these two parts, we obtained the final probabilistic correctness argument for the randomized parallel algorithm.
 With high probability, random weighting isolates a unique minimum-weight perfect matching.

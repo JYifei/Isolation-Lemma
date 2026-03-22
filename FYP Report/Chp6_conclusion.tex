@@ -1,9 +1,11 @@
 \chapter{Conclusion and Future Work}
 \label{chp:conclusion}
 
+Having completed both the formal proof of the Isolation Lemma and its application to a machine-checked correctness argument for the Perfect Matching problem, we now turn to the broader contributions, methodological lessons and reflections, and future directions of the report.
+
 \section{Summary of Research Achievements}
 This report has presented a machine-checked formalization of the Isolation Lemma in Isabelle/HOL, together with its application within a two-stage machine-checked correctness argument for a randomized parallel algorithm for the Perfect Matching problem.
-By navigating the transition from pen-and-paper probabilistic intuition to formal, machine-checked reasoning, we have established a rigorous foundation for formalizing and verifying randomized algorithmic arguments.
+In doing so, we have established a rigorous foundation for the formalization and verification of randomized algorithmic arguments.
 
 The primary contributions of this work are:
 \begin{itemize}
@@ -33,7 +35,6 @@ The key lesson is that in a proof assistant, this probabilistic infrastructure m
 A second methodological lesson was that the \textbf{Structured Proof (SP)} layer served as a useful bridge between informal intuition and fully formal proof development.
 While SP is not itself a logical innovation, it acts as a diagnostic tool that decomposes compressed folklore-style arguments into explicit intermediate steps.
 This methodology revealed that many steps treated as obvious in the literature require non-trivial formal justification, particularly the measurability of the threshold $\alpha(x)$, which is typically left implicit in pen-and-paper presentations.
-This was particularly evident in the need to establish measurability properties (such as for $\alpha(x)$), which emerged as non-trivial obligations rather than routine steps.
 
 \subsection{Consistency of Representations}
 In Chapter~\ref{chp:matching}, we encountered a representation gap between graph-theoretic permutations and set-theoretic edge families.
@@ -49,8 +50,8 @@ This illustrates that seemingly low-level issues, such as type coercions and mea
 
 \paragraph{Summary.}
 Taken together, these observations show that the formalization of the Isolation Lemma is not merely a transition of an existing argument into Isabelle/HOL, but a refinement of its logical structure.
-Several aspects of the argument that appear straightforward in informal presentations-such as independence assumptions, measurability conditions, and representation consistency-become explicit proof obligations in the formal setting.
-This suggests that formal verification does not only increase rigor, but can also clarify the underlying structure of randomized algorithms by exposing hidden dependencies and implicit assumptions.
+Several aspects of the argument that appear straightforward in informal presentations---such as independence assumptions, measurability conditions, and representation consistency---become explicit proof obligations in the formal setting.
+This suggests that formal verification not only increases rigor, but can also clarify the underlying structure of randomized algorithms by exposing hidden dependencies and implicit assumptions.
 
 \section{Reflections on Formal Methods in an Independent Research Context}
 
@@ -68,7 +69,7 @@ However, working through the formalization made it clear that the proof assistan
 
 Instead, it forces a re-examination of definitions, assumptions, and proof dependencies at every stage.
 In this respect, learning Isabelle/HOL and formal mathematics in an independent research context was not separate from the research itself, but became one of the means through which the underlying mathematics was more fully understood.
-This shift suggest that engaging with a proof assistant does not merely formalize understanding, but actively reshapes what it means to understand a mathematical argument.
+This shift suggests that engaging with a proof assistant does not merely formalize understanding, but actively reshapes what it means to understand a mathematical argument.
 
 \subsection{From Following Proofs to Reconstructing Proofs}
 
@@ -80,7 +81,7 @@ Many steps that appear routine in pen-and-paper presentations depend on side con
 This was particularly evident in the treatment of probabilistic constructions, measurability conditions, and the transfer between different representations of the same mathematical object.
 
 The project therefore sharpened the distinction between intuitive understanding and fully articulated understanding: to formalize a proof is not simply to restate it more rigorously, but to reconstruct the structure that makes each step valid.
-More importantly, it suggest that formalization can play a role in the development of theoretical results themselves, by making hidden assumptions visible and forcing a more robust formulation of arguments.
+More importantly, it suggests that formalization can play a role in the development of theoretical results themselves, by making hidden assumptions visible and forcing a more robust formulation of arguments.
 
 
 \subsection{Implications for Future Theoretical Research}
@@ -102,9 +103,10 @@ Future research could extend this work in several directions:
 \begin{itemize}
     \item \textbf{Further Isolation-Based Applications:}
     A natural next step is to extend the present development to other algorithmic settings that follow the same proof pattern, namely using random weighting to isolate a unique combinatorial object from a larger family of candidates.
-    Besides bipartite perfect matching, promising examples include isolation-based counting or witness-extraction arguments for subset families, where uniqueness is used to reduce a large solution space to a single distinguished object with high probability \cite{mulmuley1987matching,chari1995isolation}.
+    Besides bipartite perfect matching, promising examples include isolation-based counting and witness extraction for subset families, where uniqueness is used to reduce a large solution space to a single distinguished object with high probability \cite{mulmuley1987matching,chari1995isolation}.
     \item \textbf{Application to Other Combinatorial Structures}:
-    Beyond bipartite perfect matchings, it would be valuable to investigate how readily the current Isabelle/HOL formalization-particularly the representation of weighted subsets, the probabilistic framework based on \texttt{Pi\_pmf}, and the unique argument-transfers to other combinatorial families in which weighted subsets are used to distinguish a unique optimum.
+    Beyond bipartite perfect matchings, it would be valuable to investigate how readily the current Isabelle/HOL formalization transfers to other combinatorial families in which weighted subsets are used to distinguish a unique optimum.    
+    In particular, this concerns the reuse of the representation of weighted subsets, the probabilistic framework based on \texttt{Pi\_pmf}, and the uniqueness argument.
     Possible candidates include spanning-tree-type families or other subset-based structures, where the main question is not merely whether isolation holds abstractly, but how much of the present Isabelle/HOL infrastructure can be reused with only limited redesign.
     \item \textbf{Proof Automation for Probabilistic Reasoning}:
     Future efforts could also investigate better automation support for recurring proof obligations encountered in this development, such as measurability conditions, summation manipulations, and routine divisibility reasoning.

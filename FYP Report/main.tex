@@ -23,6 +23,11 @@
 % =============================================================
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{float}
+\usepackage{needspace}
+
+\newcommand{\listingneedspace}{\needspace{8\baselineskip}}
+\newcommand{\biglistingneedspace}{\needspace{12\baselineskip}}
 
 
 \lstdefinelanguage{Isabelle}{
@@ -55,7 +60,6 @@
         {EX}{{$\exists$}}1
         {EX!}{{$\exists!$}}2
         {&}{{$\land$}}1
-        {|}{{$\lor$}}1
         {-->}{{$\longrightarrow$}}2
         {\\neq}{{$\neq$}}1
         {\\not}{{$\neg$}}1
@@ -134,7 +138,7 @@
 % Adjusted title and code (Removed brackets [])
 \title{\uppercase{Formalizing the Isolation Lemma in Isabelle/HOL}}
 \newcommand\fypcode{CCDS25-0096} 
-\author{Jiang Yifei}
+\author{\uppercase{Jiang Yifei}}
 \date{2026}
 \newcommand\degree{Bachelor of Computing in Computer Science}
 
