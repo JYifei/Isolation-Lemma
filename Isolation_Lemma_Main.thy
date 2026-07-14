@@ -3,37 +3,33 @@ theory Isolation_Lemma_Main
           "HOL-Probability.Product_PMF"
 begin
 
-type_synonym 'a weight = "'a \<Rightarrow> nat" 
-  (*weight maps an element to an natural number*)
+type_synonym 'a weight = "'a \<Rightarrow> nat"
+  (* maps each element to a natural-number weight *)
 
-definition wt :: "'a weight \<Rightarrow> 'a set \<Rightarrow> nat"  where 
-  "wt w S = (\<Sum>x\<in>S. w x)"  
-  (*sum of weight*)
+definition wt :: "'a weight \<Rightarrow> 'a set \<Rightarrow> nat" where
+  "wt w S = (\<Sum>x\<in>S. w x)"
+  (* total weight of a set *)
 
-definition minimizer :: "'a set set \<Rightarrow> 'a weight \<Rightarrow>'a set \<Rightarrow> bool" where
+definition minimizer :: "'a set set \<Rightarrow> 'a weight \<Rightarrow> 'a set \<Rightarrow> bool" where
   "minimizer F w A =
-    (A \<in> F \<and> (\<forall> B \<in> F. wt w A \<le> wt w B))" 
-  (*A is one minimizer of F under weight w*)
+    (A \<in> F \<and> (\<forall>B \<in> F. wt w A \<le> wt w B))"
+  (* A has minimal weight in F *)
 
 definition has_unique_minimizer :: "'a set set \<Rightarrow> 'a weight \<Rightarrow> bool" where
   "has_unique_minimizer F w =
-    (\<exists>! A \<in> F. minimizer F w A)"
-  (*then A is the unique minimizer of F under weight w*)
+    (\<exists>!A \<in> F. minimizer F w A)"
+  (* F has exactly one minimizer under w *)
 
-definition w_pmf :: "nat \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> nat) pmf"
-  where "w_pmf N U =
+definition w_pmf :: "nat \<Rightarrow> 'a set \<Rightarrow> ('a \<Rightarrow> nat) pmf" where
+  "w_pmf N U =
      (Pi_pmf U (0::nat) (\<lambda>_. pmf_of_set {1..N}))"
-  (*weight_pmf makes w x independently and uniformly distributed over {1..N}*)
+  (* independent uniform weights on {1..N} *)
 
+(* nonempty family has at least one minimizer *)
 lemma exist_minimizer:
-(*prove that for a set family F there must exist at least one minimier
-  1. prove that for an element S in F, there is natural number n to be the wt of S
-  2. take the smallest n, namely m, and the according set A
-  3. prove m is smaller or equal to other n*)
   assumes "F \<noteq> {}"
-  obtains A where "A\<in>F" "minimizer F w A"
-
-proof-
+  obtains A where "A \<in> F" "minimizer F w A"
+proof -
   obtain S0 where "S0 \<in> F" using assms by auto
   define m where "m =(LEAST n. \<exists>S\<in>F. wt w S = n) "
   have "\<exists>S \<in> F. wt w S = m"
@@ -55,12 +51,11 @@ proof-
     unfolding minimizer_def by blast
 qed
 
-lemma no_unique_minimizer :
-  (*From exist_minimizer, there must exist at least one minimizer
-    then since we assume it is not unique, there must be at least two.*)
-  assumes "F \<noteq> {}" "\<not>has_unique_minimizer F w"
-  obtains A B where "minimizer F w A" "minimizer F w B " "A \<noteq> B" "A \<in> F" "B \<in> F"
-proof - 
+(* non-uniqueness yields two distinct minimizers *)
+lemma no_unique_minimizer:
+  assumes "F \<noteq> {}" "\<not> has_unique_minimizer F w"
+  obtains A B where "minimizer F w A" "minimizer F w B" "A \<noteq> B" "A \<in> F" "B \<in> F"
+proof -
   obtain A where "A\<in>F" "minimizer F w A"
     using exist_minimizer [OF assms(1)] by auto
   then obtain B where "B \<in> F" "minimizer F w B" "B \<noteq> A" 
@@ -69,48 +64,40 @@ proof -
     using \<open>A\<in>F\<close> \<open>minimizer F w A\<close> that by blast
 qed
 
+(* two distinct minimizers imply non-uniqueness *)
 lemma two_minimizers_not_unique:
-  (*Assume two different minimizers A and B in F,
-    if the uniqueness holds, A and B must be equal,
-    thus contradicts with our assumption that A \<noteq> B*)
-  assumes  "minimizer F w A" "minimizer F w B " "A \<noteq> B" "A \<in> F" "B \<in> F"
-  shows "\<not>has_unique_minimizer F w"
+  assumes "minimizer F w A" "minimizer F w B" "A \<noteq> B" "A \<in> F" "B \<in> F"
+  shows "\<not> has_unique_minimizer F w"
 proof
   assume "has_unique_minimizer F w"
-  then obtain X where "X\<in>F" "minimizer F w X"
-    "\<forall>Y. Y\<in>F \<and> minimizer F w Y \<longrightarrow> Y = X"
+  then obtain X where "X \<in> F" "minimizer F w X"
+    "\<forall>Y. Y \<in> F \<and> minimizer F w Y \<longrightarrow> Y = X"
     unfolding has_unique_minimizer_def by auto
   hence "A = X" "B = X" using assms(1,2,4,5) by auto
   thus False using assms(3) by simp
 qed
 
+(* non-unique iff there exist two distinct minimizers *)
 lemma not_unique_iff_exist_two:
   assumes "F \<noteq> {}"
-  shows "\<not> has_unique_minimizer F w  \<longleftrightarrow> 
-        (\<exists>A B. A \<in> F \<and> B \<in> F \<and> minimizer F w A \<and> minimizer F w B \<and> A \<noteq> B)"
+  shows "\<not> has_unique_minimizer F w \<longleftrightarrow>
+    (\<exists>A B. A \<in> F \<and> B \<in> F \<and> minimizer F w A \<and> minimizer F w B \<and> A \<noteq> B)"
   by (metis assms no_unique_minimizer two_minimizers_not_unique)
 
-
+(* all minimizers have equal weight *)
 lemma minimizers_same_weight:
-(* If A and B are both minimizers, then their weights must be equal. *)
   assumes "minimizer F w A" "minimizer F w B"
   shows "wt w A = wt w B"
   using assms unfolding minimizer_def by (meson order_antisym le_cases order_trans)
 
-
+(* alpha(x): least weight without x minus least residual weight with x *)
 definition alpha :: "('a \<Rightarrow> nat) \<Rightarrow> 'a set set \<Rightarrow> 'a \<Rightarrow> nat" where
-(* Definition of alpha: it measures the difference between
-   the minimal weight of sets not containing x
-   and the minimal residual weight of sets containing x. *)
   "alpha w F x =
      (LEAST n. \<exists>S\<in>F. x \<notin> S \<and> wt w S = n)
    - (LEAST n. \<exists>S\<in>F. x \<in> S \<and> wt w (S - {x}) = n)"
 
+(* if B minimizes and x notin B, the outer LEAST equals wt w B *)
 lemma minimizer_B_eq_least_not_in:
-(* If B is a minimizer and x \<notin> B,
-   then the least weight among sets not containing x must be realized by B,
-   i.e. equals wt w B.
-   This eliminates the first LEAST in the definition of alpha. *)
   assumes "minimizer F w B" "x \<notin> B"
   shows "(LEAST n. \<exists>S\<in>F. x \<notin> S \<and> wt w S = n) = wt w B"
 proof -
@@ -120,24 +107,19 @@ proof -
     using B_inF assms(2) by auto
   have least: "\<And>n. (\<exists>S\<in>F. x \<notin> S \<and> wt w S = n) \<Longrightarrow> wt w B \<le> n"
     using B_le by auto
-show ?thesis
-  apply (rule Least_equality)
-  using witness least by auto
+  show ?thesis
+    apply (rule Least_equality)
+    using witness least by auto
 qed
 
+(* if x in S then wt w S = wt w (S - {x}) + w x *)
 lemma wt_split_point:
-(* Splitting formula: if x \<in> S, then
-   wt w S = wt w (S - {x}) + w x. 
-   Quite simple lemma for brevity in following proof *)
   assumes "finite S" "x \<in> S"
   shows "wt w S = wt w (S - {x}) + w x"
   using assms unfolding wt_def by (simp add: sum.remove)
 
+(* if A minimizes and x in A, the residual LEAST equals wt w (A - {x}) *)
 lemma minimizer_A_eq_least_in_residual:
-(* If A is a minimizer and x \<in> A,
-   then the least residual weight among sets containing x
-   is realized by A−{x}, i.e. equals wt w (A−{x}).
-   This eliminates the second LEAST in the definition of alpha. *)
   assumes "finite U" "F \<subseteq> Pow U" "minimizer F w A" "x \<in> A"
   shows "(LEAST n. \<exists>S\<in>F. x \<in> S \<and> wt w (S - {x}) = n) = wt w (A - {x})"
 proof -
@@ -166,16 +148,13 @@ proof -
     using least by simp
 qed
 
+(* weights that agree on S give the same total weight *)
 lemma wt_cong_on:
   assumes "\<And>y. y \<in> S \<Longrightarrow> w y = w' y"
-  shows   "wt w S = wt w' S"
-proof -
-  show ?thesis
-    unfolding wt_def
-    by (rule sum.cong) (use assms in auto)
-qed
+  shows "wt w S = wt w' S"
+  unfolding wt_def by (rule sum.cong) (use assms in auto)
 
-
+(* alpha depends only on weights on U - {x} *)
 lemma alpha_independent_of_coord:
   assumes "finite U" "F \<subseteq> Pow U" "x \<in> U"
   shows "\<forall>w w'. (\<forall>y\<in>U - {x}. w y = w' y) \<longrightarrow> alpha (w :: 'a \<Rightarrow> nat) F x = alpha w' F x"
@@ -243,71 +222,30 @@ proof (intro allI impI)
 qed
 
 
+(* two minimizers and x in A - B imply alpha w F x = w x *)
 lemma two_minimizers_alpha_eq:
-(* Main conclusion:
-   If A and B are two distinct minimizers and x \<in> A−B,
-   then alpha w F x = w x.
-   We use the lemma proved above to connect the two "LEAST"s *)
   assumes "finite U" "F \<subseteq> Pow U"
           "A \<in> F" "B \<in> F"
           "minimizer F w A" "minimizer F w B"
           "x \<in> A - B"
-  shows   "alpha w F x = w x"
+  shows "alpha w F x = w x"
 proof -
-  have x_in: "x\<in>A" and x_out: "x\<notin>B" using assms(7) by auto
+  have x_in: "x \<in> A" and x_out: "x \<notin> B" using assms(7) by auto
   have Least_out: "(LEAST n. \<exists>S\<in>F. x \<notin> S \<and> wt w S = n) = wt w B"
     by (simp add: assms(6) minimizer_B_eq_least_not_in x_out)
   have Least_in: "(LEAST n. \<exists>S\<in>F. x \<in> S \<and> wt w (S - {x}) = n) = wt w (A - {x})"
     using assms(1,2,5) minimizer_A_eq_least_in_residual x_in
     by fastforce
-
-
   have eqAB: "wt w A = wt w B"
     using assms(5,6) minimizers_same_weight by auto
-
   have finA: "finite A" using assms(1,2,3)
     by (meson Pow_iff rev_finite_subset subset_iff)
   have splitA: "wt w A = wt w (A - {x}) + w x"
     by (simp add: finA wt_split_point x_in)
-
-  show ?thesis 
-  by (metis (mono_tags, lifting) Least_in Least_out
-      add_diff_cancel_left' alpha_def eqAB
-      splitA)
-qed
-
-
-lemma w_pmf_component_in_range:
-  assumes "x \<in> U" "N \<ge> 1" "finite U"
-  shows "set_pmf (map_pmf (\<lambda>w. w x) (w_pmf N U)) \<subseteq> {1..N}"
-  using assms
-  unfolding w_pmf_def
-  by (auto simp: set_map_pmf set_Pi_pmf PiE_dflt_def set_pmf_of_set)
-
-lemma w_pmf_outside_range_zero:
-  assumes "x \<in> U" "N \<ge> 1" "finite U" "k \<notin> {1..N}"
-  shows "measure_pmf.prob (w_pmf N U) {w. w x = k} = 0"
-proof -
-  have empty: "{w \<in> set_pmf (w_pmf N U). w x = k} = {}"
-    using w_pmf_component_in_range[OF assms(1,2,3)] assms(4)
-    by (auto simp: set_map_pmf)
-  
-  have "{w. w x = k} \<inter> set_pmf (w_pmf N U) = {}"
-    using empty by auto
-  
-  moreover have "measure_pmf.prob (w_pmf N U) {w. w x = k} 
-               = measure_pmf.prob (w_pmf N U) ({w. w x = k} \<inter> set_pmf (w_pmf N U))"
-  proof (rule measure_pmf.finite_measure_eq_AE)
-    show "{w. w x = k} \<in> measure_pmf.events (w_pmf N U)"
-      by simp
-    show "{w. w x = k} \<inter> set_pmf (w_pmf N U) \<in> measure_pmf.events (w_pmf N U)"
-      by simp
-    show "AE w in measure_pmf (w_pmf N U). 
-          (w \<in> {w. w x = k}) = (w \<in> {w. w x = k} \<inter> set_pmf (w_pmf N U))"
-      by (auto simp: AE_measure_pmf_iff)
-  qed
-  
-  ultimately show ?thesis by simp
+  show ?thesis
+    by (metis (mono_tags, lifting) Least_in Least_out
+        add_diff_cancel_left' alpha_def eqAB
+        splitA)
 qed
 
 lemma set_pmf_prob_eqI:
@@ -323,6 +261,7 @@ lemma set_pmf_w_pmf:
   unfolding w_pmf_def set_Pi_pmf[OF assms]
   ..
 
+(* alpha is measurable in the U - {x} coordinates *)
 lemma alpha_measurable:
   assumes "finite U" "F \<subseteq> Pow U" "x \<in> U"
   shows "(\<lambda>f. alpha (\<lambda>y. if y \<in> U-{x} then f y else 0) F x) 
@@ -427,33 +366,28 @@ proof -
 qed
 
 
-theorem isolation_lemma_main :
+(* Isolation lemma: P(unique minimizer) >= 1 - |U|/N *)
+theorem isolation_lemma_main:
   fixes U :: "'a set" and F :: "'a set set" and N :: nat
-  assumes "finite U" "F \<subseteq> Pow U" " F \<noteq> {}" "N \<ge> 1"
+  assumes "finite U" "F \<subseteq> Pow U" "F \<noteq> {}" "N \<ge> 1"
   shows
-    "measure_pmf.prob (w_pmf N U){w. has_unique_minimizer F w} \<ge> 1 - real(card U)/real N"
-proof-
-  (*bad case:(at least) two sets have same weight, suppose A and B
-    can find a point x where x \<in> A but x \<notin> B.
-    define \<alpha>(x) according to the proofs, then if "bad",
-    \<alpha>(x) = w(x), which is at most 1/N;
-    so for the probability that such x exists is at most n*1/N
-    *)
-
+    "measure_pmf.prob (w_pmf N U) {w. has_unique_minimizer F w} \<ge> 1 - real (card U) / real N"
+proof -
+  (* for each x, P(alpha = w x) <= 1/N by independence and uniformity *)
   have probx: "x \<in> U \<Longrightarrow>
     measure_pmf.prob (w_pmf N U)
       {w. alpha w F x = w x} \<le> 1 / N" for x
   proof -
     assume xU: "x \<in> U"
 
-    (* todo: add an assumption on k *)
     have probk: "\<And>k. k \<in> {1..N} \<Longrightarrow>
       measure_pmf.prob (w_pmf N U) {w. w x = k} = 1 / real N"
     proof -
       fix k
       assume "k \<in> {1..N}"
       have "measure_pmf.prob (w_pmf N U) {w. w x = k} =
-        measure_pmf.prob (w_pmf N U) (Pi U (\<lambda>y. if x = y then {k} else UNIV))"      apply (intro set_pmf_prob_eqI)
+        measure_pmf.prob (w_pmf N U) (Pi U (\<lambda>y. if x = y then {k} else UNIV))"
+        apply (intro set_pmf_prob_eqI)
           unfolding set_pmf_w_pmf[OF assms(1)]
           apply auto
           using xU by force
@@ -469,15 +403,11 @@ proof-
       measure_pmf.prob
         (pmf_of_set {1..N})
         {k} *
-       (\<Prod>xa\<in>U-{x}.
+       (\<Prod>y\<in>U-{x}.
        measure_pmf.prob
         (pmf_of_set {1..N})
         (UNIV))"
-        apply (subst prod.remove[OF assms(1) xU])
-        apply auto
-        by (smt (verit) Diff_insert_absorb measure_pmf_UNIV
-            mk_disjoint_insert prod.not_neutral_contains_not_neutral
-            xU)
+        by (simp add: prod.remove[OF assms(1) xU] prod.neutral)
       also have "... = 1/N"
         proof -
           have prod_eq_1: "(\<Prod>xa\<in>U-{x}. measure_pmf.prob (pmf_of_set {1..N}) UNIV) = 1"
@@ -614,7 +544,7 @@ qed
       by (simp add: sum_distrib_left mult.commute sum_mono mult_left_mono)
 
     moreover
-       (*Independent, sum of all probability that alpha(x) = k is less or equal than 1*)
+      (* sum_k P(alpha = k) <= 1 *)
       have sum_alpha_le1: "(\<Sum>k\<in>{1..N}. measure_pmf.prob (w_pmf N U) {w. alpha w F x = k}) \<le> 1"
       proof -
         have "(\<Sum>k\<in>{1..N}. measure_pmf.prob (w_pmf N U) {w. alpha w F x = k})
@@ -628,50 +558,66 @@ qed
       using assms(4) by (simp add: divide_simps)
   qed
 
-  (* bad case upper bound *)
-  have bad_upper_bound: 
-    "measure_pmf.prob (w_pmf N U) {w. \<not> has_unique_minimizer F w} \<le> real(card U) / real N"
+  (* non-unique event is covered by Union_x {alpha = w x}; then union bound *)
+  have bad_upper_bound:
+    "measure_pmf.prob (w_pmf N U) {w. \<not> has_unique_minimizer F w} \<le> real (card U) / real N"
   proof -
-    (* non-unique, then two minimizers, then exists x with alpha=w(x) *)
     have "measure_pmf.prob (w_pmf N U) {w. \<not> has_unique_minimizer F w}
          \<le> measure_pmf.prob (w_pmf N U) (\<Union>x\<in>U. {w. alpha w F x = w x})"
     proof -
-      have inclusion:  "{w. \<not> has_unique_minimizer F w} \<subseteq> (\<Union>x\<in>U. {w. alpha w F x = w x})"
-        unfolding has_unique_minimizer_def apply auto
-        apply (meson assms(3) exist_minimizer)
-        apply (smt (verit) DiffI Pow_iff assms(1,2) subsetD two_minimizers_alpha_eq)
-        by (smt (verit) DiffI Pow_iff assms(1,2) subsetD two_minimizers_alpha_eq)
-        from inclusion show ?thesis 
+      have inclusion: "{w. \<not> has_unique_minimizer F w} \<subseteq> (\<Union>x\<in>U. {w. alpha w F x = w x})"
+      proof
+        fix w
+        assume "w \<in> {w. \<not> has_unique_minimizer F w}"
+        then have "\<not> has_unique_minimizer F w" by simp
+        then obtain A B where
+          Ain: "A \<in> F" and Bin: "B \<in> F"
+          and Amin: "minimizer F w A" and Bmin: "minimizer F w B"
+          and neq: "A \<noteq> B"
+          using not_unique_iff_exist_two[OF assms(3)] by blast
+        from neq have "A - B \<noteq> {} \<or> B - A \<noteq> {}" by auto
+        then consider (AB) "A - B \<noteq> {}" | (BA) "B - A \<noteq> {}" by blast
+        then show "w \<in> (\<Union>x\<in>U. {w. alpha w F x = w x})"
+        proof cases
+          case AB
+          then obtain x where xAB: "x \<in> A - B" by blast
+          have "A \<subseteq> U" using Ain assms(2) by auto
+          with xAB have "x \<in> U" by auto
+          moreover have "alpha w F x = w x"
+            using two_minimizers_alpha_eq[OF assms(1,2) Ain Bin Amin Bmin xAB] .
+          ultimately show ?thesis by blast
+        next
+          case BA
+          then obtain x where xBA: "x \<in> B - A" by blast
+          have "B \<subseteq> U" using Bin assms(2) by auto
+          with xBA have "x \<in> U" by auto
+          moreover have "alpha w F x = w x"
+            using two_minimizers_alpha_eq[OF assms(1,2) Bin Ain Bmin Amin xBA] .
+          ultimately show ?thesis by blast
+        qed
+      qed
+      from inclusion show ?thesis
         using measure_pmf.finite_measure_mono by auto
     qed
-    (* union bound *)
     also have "... \<le> (\<Sum>x\<in>U. measure_pmf.prob (w_pmf N U) {w. alpha w F x = w x})"
       using assms(1) by (intro measure_UNION_le) auto
-
-    (* each term \<le> 1/N *)
     also have "... \<le> (\<Sum>x\<in>U. 1 / real N)"
       by (intro sum_mono[OF probx])
-    (* Simplify sum *)
-    also have "... = real(card U) / real N"
+    also have "... = real (card U) / real N"
       using assms by simp
-
     finally show ?thesis .
   qed
 
-  (* prob of good case = 1 - prob of bad case *)
   have "measure_pmf.prob (w_pmf N U) {w. has_unique_minimizer F w}
       = 1 - measure_pmf.prob (w_pmf N U) {w. \<not> has_unique_minimizer F w}"
   proof -
     have set_eq: "{w. has_unique_minimizer F w}
                 = space (measure_pmf (w_pmf N U)) - {w. \<not> has_unique_minimizer F w}" by auto
     have meas[simp]: "{w. \<not> has_unique_minimizer F w} \<in> sets (measure_pmf (w_pmf N U))" by auto
-    show ?thesis using measure_pmf.prob_compl set_eq by auto 
+    show ?thesis using measure_pmf.prob_compl set_eq by auto
   qed
-
-  (*Having bad case is U/N, good case is 1 - U/N*)
-  also have "... \<ge> 1 - real(card U) / real N"
+  also have "... \<ge> 1 - real (card U) / real N"
     using bad_upper_bound by simp
-
   finally show ?thesis .
 qed
 
