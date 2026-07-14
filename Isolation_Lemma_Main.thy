@@ -388,9 +388,9 @@ proof -
       have "measure_pmf.prob (w_pmf N U) {w. w x = k} =
         measure_pmf.prob (w_pmf N U) (Pi U (\<lambda>y. if x = y then {k} else UNIV))"
         apply (intro set_pmf_prob_eqI)
-          unfolding set_pmf_w_pmf[OF assms(1)]
-          apply auto
-          using xU by force
+        unfolding set_pmf_w_pmf[OF assms(1)]
+        apply clarsimp
+        using xU by force
       also have "... =
       (\<Prod>y\<in>U  .
        measure_pmf.prob
@@ -410,7 +410,7 @@ proof -
         by (simp add: prod.remove[OF assms(1) xU] prod.neutral)
       also have "... = 1/N"
         proof -
-          have prod_eq_1: "(\<Prod>xa\<in>U-{x}. measure_pmf.prob (pmf_of_set {1..N}) UNIV) = 1"
+          have prod_eq_1: "(\<Prod>y\<in>U-{x}. measure_pmf.prob (pmf_of_set {1..N}) UNIV) = 1"
             using measure_pmf_UNIV by simp
           
           have prob_k: "measure_pmf.prob (pmf_of_set {1..N}) {k} = 1 / real N"
@@ -441,7 +441,7 @@ proof -
       unfolding set_pmf_w_pmf[OF assms(1)]
       apply clarsimp
       apply (subst set_pmf_of_set)
-      using assms by (auto simp add:PiE_dflt_def xU)
+      using assms by (auto simp add: PiE_dflt_def xU)
     also have " ...
         = (\<Sum>k\<in>{1..N}. measure_pmf.prob (w_pmf N U)
           {w. alpha w F x = k \<and> w x = k})"
@@ -454,7 +454,9 @@ proof -
         {w. alpha w F x = k} *
       measure_pmf.prob (w_pmf N U)
         {w. w x = k})"
-  proof (intro sum.cong, simp)
+  proof (rule sum.cong)
+    show "{1..N} = {1..N}" by simp
+  next
     fix k assume "k \<in> {1..N}"
     
     have "measure_pmf.prob (w_pmf N U) {w. alpha w F x = k \<and> w x = k}

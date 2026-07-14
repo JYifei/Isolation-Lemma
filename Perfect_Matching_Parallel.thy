@@ -291,7 +291,7 @@ lemma minor_sum_decomposition:
   apply (subst sum_distrib_left)
   apply (rule sum.cong, simp)
   using assms(1)
-  apply (auto simp: matching_with_edge_def)
+  apply (clarsimp simp: matching_with_edge_def)
   apply (subst prod.remove[where x = i])
     apply simp
   by (auto simp: mult.assoc mult.left_commute)
